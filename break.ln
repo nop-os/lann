@@ -1,0 +1,12 @@
+let count: 0
+let total: 0
+
+while count < 1000: begin
+  if count >= 500: break
+  let count: count + 1
+  
+  printf("[]\n", count)
+  let total: total + count
+end
+
+printf("total: []\n", total)

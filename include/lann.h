@@ -1,9 +1,7 @@
 #ifndef __LANN_H__
 #define __LANN_H__
 
-// TODO: back, for, break
-// TODO: use hashes instead of storing names (:<
-// TODO: fix modulo operator(%)
+// TODO: for loops
 
 // BUILT-IN FUNCTIONS:
 // type_of(value) -> 0 = number, 1 = pointer, 2 = error
@@ -85,6 +83,9 @@ enum {
   ln_word_else,
   ln_word_array,
   ln_word_while,
+  ln_word_back,
+  ln_word_break,
+  ln_word_for,
   
   ln_word_args,
   
@@ -148,7 +149,11 @@ extern ln_uint_t ln_context_offset;
 extern const char *ln_code;
 extern ln_uint_t ln_code_offset;
 
+extern int ln_back, ln_break;
+
 extern const int ln_type_match[];
+
+ln_uint_t ln_hash(const char *text);
 
 ln_uint_t ln_bump_value(ln_uint_t value);
 ln_uint_t ln_bump_text(const char *text);
@@ -175,6 +180,6 @@ ln_uint_t ln_eval_6(int exec); // and, or, xor
 ln_uint_t ln_eval_stat(int exec);
 ln_uint_t ln_eval(int exec);
 
-extern int ln_func_handle(ln_uint_t *value, const char *name);
+extern int ln_func_handle(ln_uint_t *value, ln_uint_t hash);
 
 #endif

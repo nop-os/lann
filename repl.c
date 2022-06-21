@@ -71,18 +71,18 @@ static void stats_lann(void) {
   );
 }
 
-int ln_func_handle(ln_uint_t *value, const char *name) {
-  if (!strcmp(name, "printf")) {
+int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
+  if (hash == ln_hash("printf")) {
     printf_lann();
     
     *value = LN_NULL;
     return 1;
-  } else if (!strcmp(name, "stats")) {
+  } else if (hash == ln_hash("stats")) {
     stats_lann();
     
     *value = LN_NULL;
     return 1;
-  } else if (!strcmp(name, "error")) {
+  } else if (hash == ln_hash("error")) {
     if (ln_get_arg(0) == LN_NULL) {
       *value = LN_NULL;
     } else {
