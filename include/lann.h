@@ -1,8 +1,6 @@
 #ifndef __LANN_H__
 #define __LANN_H__
 
-// TODO: for loops
-
 // BUILT-IN FUNCTIONS:
 // type_of(value) -> 0 = number, 1 = pointer, 2 = error
 // size_of(type) -> always returns sizeof(ln_uint_t)
@@ -37,7 +35,7 @@
 #define LN_VALUE_TO_RAW(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 1)) - 1))
 #define LN_VALUE_TO_FIXED(x) ((ln_int_t)(LN_VALUE_ABS((x))) * (LN_VALUE_SIGN(LN_VALUE_TO_RAW((x))) ? -1 : 1))
 #define LN_VALUE_TO_INT(x)   (LN_VALUE_TO_FIXED((x)) / (1 << LN_FIXED_DOT))
-#define LN_VALUE_TO_FLOAT(x) ((float)(LN_VALUE_TO_FIXED((x))) / (float)(1 << LN_FIXED_DOT)) 
+// #define LN_VALUE_TO_FLOAT(x) ((float)(LN_VALUE_TO_FIXED((x))) / (float)(1 << LN_FIXED_DOT)) 
 
 #define LN_FIXED_SIGN(x) ((x) < 0)
 #define LN_FIXED_ABS(x)  ((x) < 0 ? -(x) : (x))
@@ -46,7 +44,7 @@
 
 #define LN_FIXED_TO_VALUE(x) ((ln_uint_t)(LN_FIXED_ABS((x))) | (LN_FIXED_SIGN((x)) << (8 * sizeof(x) - 2)))
 #define LN_INT_TO_VALUE(x)   (LN_FIXED_TO_VALUE((ln_int_t)((x)) * (1 << LN_FIXED_DOT)))
-#define LN_FLOAT_TO_VALUE(x) (LN_FIXED_TO_VALUE((x) * (float)(1 << LN_FIXED_DOT)))
+// #define LN_FLOAT_TO_VALUE(x) (LN_FIXED_TO_VALUE((x) * (float)(1 << LN_FIXED_DOT)))
 
 #define LN_VALUE_TO_PTR(x) (LN_VALUE_ABS((x)))
 #define LN_PTR_TO_VALUE(x) ((x) | ((ln_uint_t)(1) << (8 * sizeof(x) - 1)))
@@ -85,7 +83,6 @@ enum {
   ln_word_while,
   ln_word_back,
   ln_word_break,
-  ln_word_for,
   
   ln_word_args,
   
@@ -153,7 +150,13 @@ extern int ln_back, ln_break;
 
 extern const int ln_type_match[];
 
+char ln_upper(char chr);
+int  ln_digit(char chr);
+
+int ln_case_equal(const char *str_1, const char *str_2);
+
 ln_uint_t ln_hash(const char *text);
+ln_uint_t ln_fixed(const char *text);
 
 ln_uint_t ln_bump_value(ln_uint_t value);
 ln_uint_t ln_bump_text(const char *text);

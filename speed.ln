@@ -1,7 +1,0 @@
-let count: 0
-
-while count < 100000: begin
-  let count: count + 1
-end
-
-printf("done\n")

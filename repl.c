@@ -4,18 +4,35 @@
 #include <stdio.h>
 #include <lann.h>
 
-void print_value(ln_uint_t value, int result) {
+static void print_fixed(ln_uint_t fixed, int first) {
+  if (!first && !(fixed >> LN_FIXED_DOT)) return;
+  
+  int digit = (fixed >> LN_FIXED_DOT) % 10;
+  if (fixed >> LN_FIXED_DOT) print_fixed(fixed / 10, 0);
+  
+  putchar('0' + digit);
+  if (!first) return;
+  
+  fixed = (fixed % (1 << LN_FIXED_DOT)) * 10;
+  
+  if (!fixed) return;
+  putchar('.');
+  
+  for (;;) {
+    digit = (fixed >> LN_FIXED_DOT) % 10;
+    putchar('0' + digit);
+    
+    if (!(fixed % (1 << LN_FIXED_DOT))) break;
+    fixed *= 10;
+  }
+}
+
+static void print_value(ln_uint_t value, int result) {
   int type = LN_VALUE_TYPE(value);
   
   if (type == ln_type_number) {
-    ln_uint_t fixed = (ln_uint_t)(LN_VALUE_TO_FIXED(LN_VALUE_ABS(value)));
-    int decimals = 0;
-    
-    while (decimals < LN_FIXED_DOT && !(fixed % (2 << decimals))) {
-      decimals++;
-    }
-    
-    printf("%.*f", LN_VALUE_TO_FLOAT(value), LN_FIXED_DOT - decimals);
+    if (LN_VALUE_SIGN(value)) putchar('-');
+    print_fixed(LN_VALUE_TO_FIXED(LN_VALUE_ABS(value)), 1);
   } else if (type == ln_type_pointer) {
     if (result) {
       printf("\"%s\"", ln_bump + LN_VALUE_TO_PTR(value));
@@ -90,24 +107,25 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
     }
     
     return 1;
+  } else if (hash == ln_hash("exit")) {
+    exit(LN_VALUE_TO_INT(ln_get_arg(0)));
+    return 1;
   }
   
   return 0;
 }
 
 void repl(void) {
-  char *code = NULL;
-  size_t size = 0;
+  char code[256];
+  ln_code = code;
   
   printf("lann r01, by segfaultdev\n");
   
   for (;;) {
     printf("> ", ln_context_offset * sizeof(ln_entry_t), LN_CONTEXT_SIZE * sizeof(ln_entry_t));
-    fflush(stdout);
+    // fflush(stdout);
     
-    getline(&code, &size, stdin);
-    
-    ln_code = code;
+    fgets(code, 256, stdin);
     ln_code_offset = 0;
     
     ln_uint_t value = ln_eval(1);

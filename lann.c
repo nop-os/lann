@@ -1,11 +1,8 @@
-#include <strings.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <lann.h>
-#include <math.h>
 
 uint8_t ln_bump[LN_BUMP_SIZE];
 ln_uint_t ln_bump_offset = 0, ln_bump_args = 0;
@@ -19,6 +16,24 @@ ln_uint_t ln_code_offset = 0;
 int ln_back = 0, ln_break = 0;
 
 const int ln_type_match[4] = {ln_type_number, ln_type_number, ln_type_pointer, ln_type_error};
+
+char ln_upper(char chr) {
+  if (chr >= 'a' && chr <= 'z') return (chr - 'a') + 'A';
+  return chr;
+}
+
+int ln_digit(char chr) {
+  return (chr >= '0' && chr <= '9');
+}
+
+int ln_case_equal(const char *str_1, const char *str_2) {
+  for (;;) {
+    if (ln_upper(*str_1) != ln_upper(*str_2)) return 0;
+    if (!(*str_1) || !(*str_2)) return 1;
+    
+    str_1++, str_2++;
+  }
+}
 
 ln_uint_t ln_hash(const char *text) {
   ln_uint_t hash = 0;
@@ -34,6 +49,45 @@ ln_uint_t ln_hash(const char *text) {
   hash += hash << 15;
   
   return hash;
+}
+
+ln_uint_t ln_fixed(const char *text) {
+  ln_uint_t value = 0;
+  int base = 10;
+  
+  if (*text == '0') text++;
+  
+  if (ln_upper(*text) == 'B') base = 2, text++;
+  else if (ln_upper(*text) == 'O') base = 8, text++;
+  else if (ln_upper(*text) == 'X') base = 16, text++;
+  
+  const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  char *ptr;
+  
+  while (ptr = strchr(digits, ln_upper(*text))) {
+    if (!(*ptr)) break;
+    
+    value = (value * base) + (ptr - digits);
+    text++;
+  }
+  
+  value <<= LN_FIXED_DOT;
+  
+  if (*text != '.') return value;
+  text++;
+  
+  int factor = base;
+  
+  while (ptr = strchr(digits, ln_upper(*text))) {
+    if (!(*ptr)) break;
+    
+    value += ((1 << LN_FIXED_DOT) * (ptr - digits)) / factor;
+    text++;
+    
+    factor *= base;
+  }
+  
+  return value;
 }
 
 ln_uint_t ln_bump_value(ln_uint_t value) {
@@ -179,59 +233,59 @@ ln_word_t ln_take(void) {
   
   if (!token[0]) {
     return (ln_word_t){.type = ln_word_eof};
-  } else if (!strcasecmp(token, "null")) {
+  } else if (ln_case_equal(token, "null")) {
     return (ln_word_t){.type = ln_word_null};
-  } else if (!strcasecmp(token, "begin")) {
+  } else if (ln_case_equal(token, "begin")) {
     return (ln_word_t){.type = ln_word_begin};
-  } else if (!strcasecmp(token, "end")) {
+  } else if (ln_case_equal(token, "end")) {
     return (ln_word_t){.type = ln_word_end};
-  } else if (!strcasecmp(token, "func")) {
+  } else if (ln_case_equal(token, "func")) {
     return (ln_word_t){.type = ln_word_func};
-  } else if (!strcasecmp(token, "let")) {
+  } else if (ln_case_equal(token, "let")) {
     return (ln_word_t){.type = ln_word_let};
-  } else if (!strcasecmp(token, "if")) {
+  } else if (ln_case_equal(token, "if")) {
     return (ln_word_t){.type = ln_word_if};
-  } else if (!strcasecmp(token, "else")) {
+  } else if (ln_case_equal(token, "else")) {
     return (ln_word_t){.type = ln_word_else};
-  } else if (!strcasecmp(token, "array")) {
+  } else if (ln_case_equal(token, "array")) {
     return (ln_word_t){.type = ln_word_array};
-  } else if (!strcasecmp(token, "while")) {
+  } else if (ln_case_equal(token, "while")) {
     return (ln_word_t){.type = ln_word_while};
-  } else if (!strcasecmp(token, "back")) {
+  } else if (ln_case_equal(token, "back")) {
     return (ln_word_t){.type = ln_word_back};
-  } else if (!strcasecmp(token, "break")) {
+  } else if (ln_case_equal(token, "break")) {
     return (ln_word_t){.type = ln_word_break};
-  } else if (!strcasecmp(token, "args")) {
+  } else if (ln_case_equal(token, "args")) {
     return (ln_word_t){.type = ln_word_args};
-  } else if (!strcasecmp(token, "number")) {
+  } else if (ln_case_equal(token, "number")) {
     return (ln_word_t){.type = ln_word_type_number};
-  } else if (!strcasecmp(token, "pointer")) {
+  } else if (ln_case_equal(token, "pointer")) {
     return (ln_word_t){.type = ln_word_type_pointer};
-  } else if (!strcasecmp(token, "error")) {
+  } else if (ln_case_equal(token, "error")) {
     return (ln_word_t){.type = ln_word_type_error};
-  } else if (!strcasecmp(token, "type_of")) {
+  } else if (ln_case_equal(token, "type_of")) {
     return (ln_word_t){.type = ln_word_func_type_of};
-  } else if (!strcasecmp(token, "size_of")) {
+  } else if (ln_case_equal(token, "size_of")) {
     return (ln_word_t){.type = ln_word_func_size_of};
-  } else if (!strcasecmp(token, "to_type")) {
+  } else if (ln_case_equal(token, "to_type")) {
     return (ln_word_t){.type = ln_word_func_to_type};
-  } else if (!strcasecmp(token, "get")) {
+  } else if (ln_case_equal(token, "get")) {
     return (ln_word_t){.type = ln_word_func_get};
-  } else if (!strcasecmp(token, "set")) {
+  } else if (ln_case_equal(token, "set")) {
     return (ln_word_t){.type = ln_word_func_set};
-  } else if (!strcasecmp(token, "mem_read")) {
+  } else if (ln_case_equal(token, "mem_read")) {
     return (ln_word_t){.type = ln_word_func_mem_read};
-  } else if (!strcasecmp(token, "mem_write")) {
+  } else if (ln_case_equal(token, "mem_write")) {
     return (ln_word_t){.type = ln_word_func_mem_write};
-  } else if (!strcasecmp(token, "mem_copy")) {
+  } else if (ln_case_equal(token, "mem_copy")) {
     return (ln_word_t){.type = ln_word_func_mem_copy};
-  } else if (!strcasecmp(token, "mem_test")) {
+  } else if (ln_case_equal(token, "mem_test")) {
     return (ln_word_t){.type = ln_word_func_mem_test};
-  } else if (!strcasecmp(token, "str_copy")) {
+  } else if (ln_case_equal(token, "str_copy")) {
     return (ln_word_t){.type = ln_word_func_str_copy};
-  } else if (!strcasecmp(token, "str_test")) {
+  } else if (ln_case_equal(token, "str_test")) {
     return (ln_word_t){.type = ln_word_func_str_test};
-  } else if (!strcasecmp(token, "str_size")) {
+  } else if (ln_case_equal(token, "str_size")) {
     return (ln_word_t){.type = ln_word_func_str_size};
   } else if (token[0] == ',') {
     return (ln_word_t){.type = ln_word_comma};
@@ -263,14 +317,14 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_bit_or};
   } else if (token[0] == '^') {
     return (ln_word_t){.type = ln_word_bit_xor};
-  } else if (!strcasecmp(token, "and")) {
+  } else if (ln_case_equal(token, "and")) {
     return (ln_word_t){.type = ln_word_bool_and};
-  } else if (!strcasecmp(token, "or")) {
+  } else if (ln_case_equal(token, "or")) {
     return (ln_word_t){.type = ln_word_bool_or};
-  } else if (!strcasecmp(token, "xor")) {
+  } else if (ln_case_equal(token, "xor")) {
     return (ln_word_t){.type = ln_word_bool_xor};
-  } else if (isdigit(token[0])) {
-    return (ln_word_t){.type = ln_word_number, .data = LN_FLOAT_TO_VALUE(strtof(token, NULL))};
+  } else if (ln_digit(token[0])) {
+    return (ln_word_t){.type = ln_word_number, .data = ln_fixed(token)};
   } else {
     return (ln_word_t){.type = ln_word_name, .data = ln_hash(ln_bump + offset)};
   }
@@ -494,23 +548,26 @@ ln_uint_t ln_eval_0(int exec) {
     }
   } else if (ln_expect(NULL, ln_word_while)) {
     ln_uint_t code_offset = ln_code_offset;
+    ln_uint_t value = LN_NULL;
     
-repeat_while:
-    ln_uint_t value = ln_eval_expr(exec);
-    int cond = LN_VALUE_TO_FIXED(value);
-    
-    if (LN_VALUE_TYPE(value) == ln_type_pointer) cond = ln_bump[LN_VALUE_TO_PTR(value)];
-    if (LN_VALUE_TYPE(value) == ln_type_error) cond = 0;
-    
-    value = LN_NULL;
-    
-    if (cond && exec) {
-      value = ln_eval_expr(1);
-      ln_code_offset = code_offset;
+    for (;;) {
+      value = ln_eval_expr(exec);
+      int cond = LN_VALUE_TO_FIXED(value);
       
-      if (!ln_back && !ln_break) goto repeat_while;
-    } else {
-      ln_eval_expr(0);
+      if (LN_VALUE_TYPE(value) == ln_type_pointer) cond = ln_bump[LN_VALUE_TO_PTR(value)];
+      if (LN_VALUE_TYPE(value) == ln_type_error) cond = 0;
+      
+      value = LN_NULL;
+      
+      if (cond && exec) {
+        value = ln_eval_expr(1);
+        ln_code_offset = code_offset;
+        
+        if (ln_back || ln_break) break;
+      } else {
+        ln_eval_expr(0);
+        break;
+      }
     }
     
     if (exec) ln_break = 0;
@@ -677,33 +734,6 @@ repeat_while:
   } else if (ln_expect(NULL, ln_word_break)) {
     if (exec) ln_break = 1;
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_for)) {
-    ln_uint_t context_offset = ln_context_offset;
-    ln_uint_t bump_offset = ln_bump_offset;
-    
-    ln_expect(&word, ln_word_name);
-    
-    ln_uint_t value = ln_eval_expr(exec);
-    
-    if (exec) {
-      ln_context[ln_context_offset++] = (ln_entry_t){
-        .name = word.data,
-        .data = value
-      };
-    }
-    
-repeat_for:
-    value = ln_eval_expr(exec);
-    int cond = LN_VALUE_TO_FIXED(value);
-    
-    
-    
-    // ln_uint_t value = ln_eval(exec);
-    
-    ln_context_offset = context_offset;
-    ln_bump_offset = bump_offset;
-    
-    // return value;
   }
   
   return LN_NULL;
@@ -734,11 +764,11 @@ ln_uint_t ln_eval_2(int exec) {
     
     if (exec) {
       if (word.type == ln_word_aster) {
-        // TODO: use fixed point multiplication, it's actually really simple!
-        left = LN_FLOAT_TO_VALUE(LN_VALUE_TO_FLOAT(left) * LN_VALUE_TO_FLOAT(right));
+        // TODO: support bigger numbers
+        left = LN_FIXED_TO_VALUE((LN_VALUE_TO_FIXED(left) * LN_VALUE_TO_FIXED(right)) >> LN_FIXED_DOT);
       } else if (word.type == ln_word_slash) {
-        // TODO: same as for multiplication...
-        left = LN_FLOAT_TO_VALUE(LN_VALUE_TO_FLOAT(left) / LN_VALUE_TO_FLOAT(right));
+        // TODO: support bigger numbers
+        left = LN_FIXED_TO_VALUE((LN_VALUE_TO_FIXED(left) << LN_FIXED_DOT) / LN_VALUE_TO_FIXED(right));
       } else if (word.type == ln_word_percent) {
         left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) % LN_VALUE_TO_FIXED(right));
       }
