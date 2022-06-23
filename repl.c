@@ -72,20 +72,38 @@ static void printf_lann(void) {
 
     format++;
   }
+  
+  // fflush(stdout);
+}
+
+static ln_uint_t get_line_lann(void) {
+  ln_uint_t value = ln_get_arg(0);
+  if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_NULL;
+  
+  fgets(ln_bump + LN_VALUE_TO_PTR(value), LN_BUMP_SIZE, stdin);
+  size_t length = strlen(ln_bump + LN_VALUE_TO_PTR(value));
+  
+  while (ln_bump[LN_VALUE_TO_PTR(value) + (length - 1)] == '\n') {
+    ln_bump[LN_VALUE_TO_PTR(value) + (length - 1)] = '\0';
+    length--;
+  }
+  
+  return LN_INT_TO_VALUE(length);
 }
 
 static void stats_lann(void) {
-  printf("bump: %u/%u bytes used (%.2f%%)\n",
+  printf("bump: %u/%u bytes used (%d%%)\n",
     ln_bump_offset,
     LN_BUMP_SIZE,
-    (float)(100 * ln_bump_offset) / (float)(LN_BUMP_SIZE)
+    (100 * ln_bump_offset + LN_BUMP_SIZE / 2) / LN_BUMP_SIZE
   );
   
-  printf("vars: %u/%u bytes used (%.2f%%)\n",
+  printf("vars: %u/%u bytes used (%d%%)\n",
     ln_context_offset * sizeof(ln_entry_t),
     LN_CONTEXT_SIZE * sizeof(ln_entry_t),
-    (float)(100 * ln_context_offset) / (float)(LN_CONTEXT_SIZE)
+    (100 * ln_context_offset + LN_CONTEXT_SIZE / 2) / LN_CONTEXT_SIZE
   );
+
 }
 
 int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
@@ -93,6 +111,9 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
     printf_lann();
     
     *value = LN_NULL;
+    return 1;
+  } else if (hash == ln_hash("get_line")) {
+    *value = get_line_lann();
     return 1;
   } else if (hash == ln_hash("stats")) {
     stats_lann();

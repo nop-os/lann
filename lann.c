@@ -38,6 +38,8 @@ int ln_case_equal(const char *str_1, const char *str_2) {
 ln_uint_t ln_hash(const char *text) {
   ln_uint_t hash = 0;
   
+  const char *old_text = text;
+  
   while (*text) {
     hash += *(text++);
     hash += hash << 10;
@@ -507,7 +509,7 @@ ln_uint_t ln_eval_0(int exec) {
       ln_bump[ln_bump_offset++] = '\0';
       
       ln_context[ln_context_offset++] = (ln_entry_t){
-        .name = LN_VALUE_TO_PTR(word.data),
+        .name = word.data,
         .data = LN_PTR_TO_VALUE(offset)
       };
     }
@@ -522,10 +524,14 @@ ln_uint_t ln_eval_0(int exec) {
       ln_bump_offset += size;
       
       ln_context[ln_context_offset++] = (ln_entry_t){
-        .name = LN_VALUE_TO_PTR(word.data),
+        .name = word.data,
         .data = LN_PTR_TO_VALUE(offset)
       };
+      
+      return LN_PTR_TO_VALUE(offset);
     }
+    
+    return LN_NULL;
   } else if (ln_expect(NULL, ln_word_null)) {
     return LN_NULL;
   } else if (ln_expect(NULL, ln_word_if)) {
