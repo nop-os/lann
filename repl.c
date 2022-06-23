@@ -18,7 +18,7 @@ static void print_fixed(ln_uint_t fixed, int first) {
   if (!fixed) return;
   putchar('.');
   
-  for (;;) {
+  for (int i = 0; i < 7; i++) {
     digit = (fixed >> LN_FIXED_DOT) % 10;
     putchar('0' + digit);
     

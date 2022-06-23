@@ -19,9 +19,25 @@
 
 #include <stdint.h>
 
-#define LN_FIXED_DOT    6
-#define LN_BUMP_SIZE    128
-#define LN_CONTEXT_SIZE 16
+#ifndef LN_UINT_TYPE
+#define LN_UINT_TYPE uint64_t
+#endif
+
+#ifndef LN_INT_TYPE
+#define LN_INT_TYPE int64_t
+#endif
+
+#ifndef LN_FIXED_DOT
+#define LN_FIXED_DOT 24
+#endif
+
+#ifndef LN_BUMP_SIZE
+#define LN_BUMP_SIZE 4096
+#endif
+
+#ifndef LN_CONTEXT_SIZE
+#define LN_CONTEXT_SIZE 512
+#endif
 
 #define LN_CHAR_DELIM ' '
 #define LN_CHAR_EOF   '\0'
@@ -35,16 +51,14 @@
 #define LN_VALUE_TO_RAW(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 1)) - 1))
 #define LN_VALUE_TO_FIXED(x) ((ln_int_t)(LN_VALUE_ABS((x))) * (LN_VALUE_SIGN(LN_VALUE_TO_RAW((x))) ? -1 : 1))
 #define LN_VALUE_TO_INT(x)   (LN_VALUE_TO_FIXED((x)) / (1 << LN_FIXED_DOT))
-// #define LN_VALUE_TO_FLOAT(x) ((float)(LN_VALUE_TO_FIXED((x))) / (float)(1 << LN_FIXED_DOT)) 
 
-#define LN_FIXED_SIGN(x) ((x) < 0)
+#define LN_FIXED_SIGN(x) ((ln_uint_t)((x) < 0))
 #define LN_FIXED_ABS(x)  ((x) < 0 ? -(x) : (x))
 
 #define LN_VALUE_NEGATE(x) (LN_FIXED_TO_VALUE(-LN_VALUE_TO_FIXED((x))))
 
 #define LN_FIXED_TO_VALUE(x) ((ln_uint_t)(LN_FIXED_ABS((x))) | (LN_FIXED_SIGN((x)) << (8 * sizeof(x) - 2)))
 #define LN_INT_TO_VALUE(x)   (LN_FIXED_TO_VALUE((ln_int_t)((x)) * (1 << LN_FIXED_DOT)))
-// #define LN_FLOAT_TO_VALUE(x) (LN_FIXED_TO_VALUE((x) * (float)(1 << LN_FIXED_DOT)))
 
 #define LN_VALUE_TO_PTR(x) (LN_VALUE_ABS((x)))
 #define LN_PTR_TO_VALUE(x) ((x) | ((ln_uint_t)(1) << (8 * sizeof(x) - 1)))
@@ -52,13 +66,17 @@
 #define LN_VALUE_TO_ERR(x) (LN_VALUE_ABS((x)))
 #define LN_ERR_TO_VALUE(x) (LN_PTR_TO_VALUE((x)) | ((ln_uint_t)(1) << (8 * sizeof(x) - 2)))
 
+// note: floating point operations are not recommended, as it requires a software floating point implementation or an FPU, and not everyone has those :p
+#define LN_VALUE_TO_FLOAT(x) ((float)(LN_VALUE_TO_FIXED((x))) / (float)(1 << LN_FIXED_DOT)) 
+#define LN_FLOAT_TO_VALUE(x) (LN_FIXED_TO_VALUE((x) * (float)(1 << LN_FIXED_DOT)))
+
 #define LN_NULL           (LN_ERR_TO_VALUE((ln_uint_t)(-1)))
 #define LN_UNDEFINED      (LN_ERR_TO_VALUE((ln_uint_t)(-2)))
 #define LN_DIVIDE_BY_ZERO (LN_ERR_TO_VALUE((ln_uint_t)(-3)))
 #define LN_INVALID_TYPE   (LN_ERR_TO_VALUE((ln_uint_t)(-4)))
 
-typedef int32_t  ln_int_t;
-typedef uint32_t ln_uint_t;
+typedef LN_INT_TYPE  ln_int_t;
+typedef LN_UINT_TYPE ln_uint_t;
 
 enum {
   ln_type_number,
