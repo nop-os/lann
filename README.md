@@ -6,6 +6,8 @@ We (or rather, I) are slowly trying to add more safety protections to lann, so e
 
 Note that currently lann is a project fully maintained by a single person, so slow progress is expected.
 
+## Example
+
 ## Building
 
 lann is meant to be an embeddable library, composed of a source file(`lann.c`) and a header(`include/lann.h`), though it is bundled by default with a simple REPL and runner program. In order to build it, you may run `sh build.sh`.
@@ -18,7 +20,11 @@ To enter the REPL prompt, run the program without any arguments: `./lann`. You s
 
 To run a lann script stored in a file, run the program with that file as an argument: `./lann test.ln`. The program will immediately run and exit automatically when done.
 
-## 
+## Embedding
+
+Embedding lann into an existing project is as easy as copying the source and header files, `lann.c` and `include/lann.h`, and compiling them alongside the project.
+
+If you want to be able to add custom C functions, pass in `-DLN_HANDLE` to GCC. You can also set the memory size (`-DLN_BUMP_SIZE=...`), variable count (`-DLN_CONTEXT_SIZE=...`), value type (`-DLN_INT_TYPE=... -DLN_UINT_TYPE=...`) and fixed point dot position (`-DLN_FIXED_DOT=...`) in your compile script or Makefile. Do not change this inside a source file, as then lann.c will be unaffected by those changes.
 
 ## Licensing
 
