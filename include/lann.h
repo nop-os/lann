@@ -201,6 +201,8 @@ ln_uint_t ln_eval_6(int exec); // and, or, xor
 ln_uint_t ln_eval_stat(int exec);
 ln_uint_t ln_eval(int exec);
 
+#ifdef LN_HANDLE
 extern int ln_func_handle(ln_uint_t *value, ln_uint_t hash);
+#endif
 
 #endif

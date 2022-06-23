@@ -17,6 +17,14 @@ int ln_back = 0, ln_break = 0;
 
 const int ln_type_match[4] = {ln_type_number, ln_type_number, ln_type_pointer, ln_type_error};
 
+#ifndef LN_HANDLE
+
+static int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
+  return 0;
+}
+
+#endif
+
 char ln_upper(char chr) {
   if (chr >= 'a' && chr <= 'z') return (chr - 'a') + 'A';
   return chr;

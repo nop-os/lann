@@ -12,11 +12,13 @@ lann is meant to be an embeddable library, composed of a source file(`lann.c`) a
 
 After running that, an executable called `lann` should have showed up in the current directory.
 
-## Testing the REPL/runner
+## Testing and running
 
 To enter the REPL prompt, run the program without any arguments: `./lann`. You should be greeted with a welcome message and a prompt like `> `. Then, you can start writing expressions and pressing enter to evaluate them. Note that expressions must be complete, you cannot leave an open begin-end block or parentheses. To exit, press Ctrl+C or call `exit()` with 0 or any return value as an argument.
 
 To run a lann script stored in a file, run the program with that file as an argument: `./lann test.ln`. The program will immediately run and exit automatically when done.
+
+## 
 
 ## Licensing
 
