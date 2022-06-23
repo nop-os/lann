@@ -184,11 +184,12 @@ int main(int argc, const char **argv) {
     ln_code = code;
     ln_code_offset = 0;
     
-    ln_eval(1);
+    ln_uint_t value = ln_eval(1);
     free(code);
+    
+    return LN_VALUE_TO_INT(value);
   } else {
     repl();
+    return 0;
   }
-  
-  return 0;
 }

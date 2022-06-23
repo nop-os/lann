@@ -299,6 +299,8 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_func_str_test};
   } else if (ln_case_equal(token, "str_size")) {
     return (ln_word_t){.type = ln_word_func_str_size};
+  } else if (ln_case_equal(token, "eval")) {
+    return (ln_word_t){.type = ln_word_func_eval};
   } else if (token[0] == ',') {
     return (ln_word_t){.type = ln_word_comma};
   } else if (token[0] == '(') {
@@ -455,7 +457,7 @@ ln_uint_t ln_eval_0(int exec) {
           }
         }
         
-        return LN_NULL;
+        return LN_UNDEFINED;
       } else {
         return LN_NULL;
       }
@@ -752,6 +754,30 @@ ln_uint_t ln_eval_0(int exec) {
     
     if (exec) return LN_INT_TO_VALUE(strlen(ln_bump + LN_VALUE_TO_PTR(ptr)));
     else return LN_NULL;
+  } else if (ln_expect(NULL, ln_word_func_eval)) {
+    ln_expect(NULL, ln_word_paren_left);
+    
+    ln_uint_t ptr = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_paren_right);
+    
+    if (LN_VALUE_TYPE(ptr) != ln_type_pointer) return LN_INVALID_TYPE;
+    
+    if (exec) {
+      const char *old_code = ln_code;
+      ln_uint_t old_offset = ln_code_offset;
+      
+      ln_code = ln_bump + LN_VALUE_TO_PTR(ptr);
+      ln_code_offset = 0;
+      
+      ln_uint_t value = ln_eval(1);
+      
+      ln_code = old_code;
+      ln_code_offset = old_offset;
+      
+      return value;
+    }
+    
+    return LN_NULL;
   } else if (ln_expect(NULL, ln_word_back)) {
     if (exec) ln_back = 1;
     return ln_return;
@@ -792,7 +818,9 @@ ln_uint_t ln_eval_2(int exec) {
         left = LN_FIXED_TO_VALUE((LN_VALUE_TO_FIXED(left) * LN_VALUE_TO_FIXED(right)) >> LN_FIXED_DOT);
       } else if (word.type == ln_word_slash) {
         // TODO: support bigger numbers
-        left = LN_FIXED_TO_VALUE((LN_VALUE_TO_FIXED(left) << LN_FIXED_DOT) / LN_VALUE_TO_FIXED(right));
+        
+        if (!LN_VALUE_TO_FIXED(right)) left = LN_DIVIDE_BY_ZERO;
+        else left = LN_FIXED_TO_VALUE((LN_VALUE_TO_FIXED(left) << LN_FIXED_DOT) / LN_VALUE_TO_FIXED(right));
       } else if (word.type == ln_word_percent) {
         left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) % LN_VALUE_TO_FIXED(right));
       }

@@ -14,6 +14,7 @@
 // str_copy(ptr_1, ptr_2)
 // str_test(ptr_1, ptr_2)
 // str_size(ptr)
+// eval(ptr)
 
 // args -> built-in pointer :D
 
@@ -120,8 +121,9 @@ enum {
   ln_word_func_str_copy,
   ln_word_func_str_test,
   ln_word_func_str_size,
+  ln_word_func_eval,
   
-  ln_word_comma, // 27
+  ln_word_comma, // 28
   ln_word_paren_left,
   ln_word_paren_right,
   ln_word_plus,
@@ -140,7 +142,7 @@ enum {
   ln_word_bool_or,
   ln_word_bool_xor,
   
-  ln_word_number, // 45
+  ln_word_number, // 46
   ln_word_name,
   ln_word_string,
   ln_word_null,
