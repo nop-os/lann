@@ -14,6 +14,7 @@ const char *ln_code = NULL;
 ln_uint_t ln_code_offset = 0;
 
 int ln_back = 0, ln_break = 0;
+ln_uint_t ln_return = LN_NULL;
 
 const int ln_type_match[4] = {ln_type_number, ln_type_number, ln_type_pointer, ln_type_error};
 
@@ -232,6 +233,7 @@ ln_word_t ln_take(void) {
         ln_bump_offset = offset;
         offset = i;
         
+        token = ln_bump + offset;
         break;
       }
     }
@@ -427,6 +429,8 @@ ln_uint_t ln_eval_0(int exec) {
               ln_code = ln_bump + LN_VALUE_TO_PTR(ln_context[i].data);
               ln_code_offset = 0;
               
+              ln_return = LN_NULL;
+              
               value = ln_eval_stat(1);
               ln_back = 0;
               
@@ -521,6 +525,8 @@ ln_uint_t ln_eval_0(int exec) {
         .data = LN_PTR_TO_VALUE(offset)
       };
     }
+    
+    return LN_PTR_TO_VALUE(offset);
   } else if (ln_expect(NULL, ln_word_array)) {
     ln_expect(&word, ln_word_name);
     
@@ -546,8 +552,10 @@ ln_uint_t ln_eval_0(int exec) {
     ln_uint_t value = ln_eval_expr(exec);
     int cond = LN_VALUE_TO_FIXED(value);
     
-    if (LN_VALUE_TYPE(value) == ln_type_pointer) cond = ln_bump[LN_VALUE_TO_PTR(value)];
-    if (LN_VALUE_TYPE(value) == ln_type_error) cond = 0;
+    if (exec) {
+      if (LN_VALUE_TYPE(value) == ln_type_pointer) cond = ln_bump[LN_VALUE_TO_PTR(value)];
+      if (LN_VALUE_TYPE(value) == ln_type_error) cond = 0;
+    }
     
     value = LN_NULL;
     
@@ -560,6 +568,8 @@ ln_uint_t ln_eval_0(int exec) {
       if (!cond && exec) value = ln_eval_expr(1);
       else ln_eval_expr(0);
     }
+    
+    return value;
   } else if (ln_expect(NULL, ln_word_while)) {
     ln_uint_t code_offset = ln_code_offset;
     ln_uint_t value = LN_NULL;
@@ -744,10 +754,10 @@ ln_uint_t ln_eval_0(int exec) {
     else return LN_NULL;
   } else if (ln_expect(NULL, ln_word_back)) {
     if (exec) ln_back = 1;
-    return LN_NULL;
+    return ln_return;
   } else if (ln_expect(NULL, ln_word_break)) {
     if (exec) ln_break = 1;
-    return LN_NULL;
+    return ln_return;
   }
   
   return LN_NULL;
@@ -888,6 +898,14 @@ ln_uint_t ln_eval_6(int exec) {
   return left;
 }
 
+ln_uint_t ln_eval_expr(int exec) {
+  if (ln_back || ln_break) exec = 0;
+  ln_uint_t value = ln_eval_6(exec);
+  
+  if (exec) ln_return = value;
+  return value;
+}
+
 ln_uint_t ln_eval_stat(int exec) {
   if (ln_back || ln_break) exec = 0;
   ln_uint_t value = ln_eval_expr(exec);
@@ -896,7 +914,7 @@ ln_uint_t ln_eval_stat(int exec) {
     value = ln_eval_expr(exec);
   }
   
-  return value;
+  return ln_return;
 }
 
 ln_uint_t ln_eval(int exec) {
@@ -907,5 +925,5 @@ ln_uint_t ln_eval(int exec) {
     value = ln_eval_stat(exec);
   }
   
-  return value;
+  return ln_return;
 }

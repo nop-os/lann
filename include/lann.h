@@ -89,9 +89,9 @@ typedef struct ln_word_t ln_word_t;
 typedef struct ln_entry_t ln_entry_t;
 
 enum {
-  ln_word_eof,
+  ln_word_eof, // 0
   
-  ln_word_begin,
+  ln_word_begin, // 1
   ln_word_end,
   ln_word_func,
   ln_word_let,
@@ -102,13 +102,13 @@ enum {
   ln_word_back,
   ln_word_break,
   
-  ln_word_args,
+  ln_word_args, // 11
   
-  ln_word_type_number,
+  ln_word_type_number, // 12
   ln_word_type_pointer,
   ln_word_type_error,
   
-  ln_word_func_type_of,
+  ln_word_func_type_of, // 15
   ln_word_func_size_of,
   ln_word_func_to_type,
   ln_word_func_get,
@@ -121,7 +121,7 @@ enum {
   ln_word_func_str_test,
   ln_word_func_str_size,
   
-  ln_word_comma,
+  ln_word_comma, // 27
   ln_word_paren_left,
   ln_word_paren_right,
   ln_word_plus,
@@ -140,7 +140,7 @@ enum {
   ln_word_bool_or,
   ln_word_bool_xor,
   
-  ln_word_number,
+  ln_word_number, // 45
   ln_word_name,
   ln_word_string,
   ln_word_null,
@@ -165,6 +165,7 @@ extern const char *ln_code;
 extern ln_uint_t ln_code_offset;
 
 extern int ln_back, ln_break;
+extern ln_uint_t ln_return;
 
 extern const int ln_type_match[];
 
@@ -188,8 +189,6 @@ ln_word_t ln_peek(void);
 int       ln_expect(ln_word_t *ptr, uint8_t type);
 int       ln_expect_2(uint8_t type_1, uint8_t type_2);
 
-#define ln_eval_expr(exec) ln_eval_6(exec)
-
 ln_uint_t ln_eval_0(int exec);
 ln_uint_t ln_eval_1(int exec); // (-), !
 ln_uint_t ln_eval_2(int exec); // *, /
@@ -198,6 +197,7 @@ ln_uint_t ln_eval_4(int exec); // &, |, ^
 ln_uint_t ln_eval_5(int exec); // =, !=, >, >=, <, <=
 ln_uint_t ln_eval_6(int exec); // and, or, xor
 
+ln_uint_t ln_eval_expr(int exec);
 ln_uint_t ln_eval_stat(int exec);
 ln_uint_t ln_eval(int exec);
 
