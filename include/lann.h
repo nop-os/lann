@@ -146,7 +146,10 @@ enum {
   ln_word_number, // 47
   ln_word_name,
   ln_word_string,
-  ln_word_null,
+  
+  ln_word_null, // 50
+  ln_word_true,
+  ln_word_false,
 };
 
 struct ln_word_t {

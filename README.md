@@ -57,6 +57,7 @@ Here are some things you can help with (if you want, of course):
 
 - Make multiplication and division work with bigger numbers (and without using floats).
 - Fix some inconsistencies with `back` and return values (???).
+- Macros with macro-end blocks.
 
 ## Licensing
 

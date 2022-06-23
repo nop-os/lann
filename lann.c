@@ -247,6 +247,10 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_eof};
   } else if (ln_case_equal(token, "null")) {
     return (ln_word_t){.type = ln_word_null};
+  } else if (ln_case_equal(token, "true")) {
+    return (ln_word_t){.type = ln_word_true};
+  } else if (ln_case_equal(token, "false")) {
+    return (ln_word_t){.type = ln_word_false};
   } else if (ln_case_equal(token, "lambda")) {
     return (ln_word_t){.type = ln_word_lambda};
   } else if (ln_case_equal(token, "begin")) {
@@ -788,6 +792,10 @@ ln_uint_t ln_eval_0(int exec) {
   } else if (ln_expect(NULL, ln_word_break)) {
     if (exec) ln_break = 1;
     return ln_return;
+  } else if (ln_expect(NULL, ln_word_true)) {
+    return LN_INT_TO_VALUE(1);
+  } else if (ln_expect(NULL, ln_word_false)) {
+    return LN_INT_TO_VALUE(0);
   }
   
   return LN_NULL;
