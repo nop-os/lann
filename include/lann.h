@@ -20,8 +20,8 @@
 #include <stdint.h>
 
 #define LN_FIXED_DOT    6
-#define LN_BUMP_SIZE    512
-#define LN_CONTEXT_SIZE 64
+#define LN_BUMP_SIZE    128
+#define LN_CONTEXT_SIZE 16
 
 #define LN_CHAR_DELIM ' '
 #define LN_CHAR_EOF   '\0'
