@@ -92,7 +92,8 @@ typedef struct ln_entry_t ln_entry_t;
 enum {
   ln_word_eof, // 0
   
-  ln_word_begin, // 1
+  ln_word_lambda, // 1
+  ln_word_begin,
   ln_word_end,
   ln_word_func,
   ln_word_let,
@@ -103,13 +104,13 @@ enum {
   ln_word_back,
   ln_word_break,
   
-  ln_word_args, // 11
+  ln_word_args, // 12
   
-  ln_word_type_number, // 12
+  ln_word_type_number, // 13
   ln_word_type_pointer,
   ln_word_type_error,
   
-  ln_word_func_type_of, // 15
+  ln_word_func_type_of, // 16
   ln_word_func_size_of,
   ln_word_func_to_type,
   ln_word_func_get,
@@ -123,7 +124,7 @@ enum {
   ln_word_func_str_size,
   ln_word_func_eval,
   
-  ln_word_comma, // 28
+  ln_word_comma, // 29
   ln_word_paren_left,
   ln_word_paren_right,
   ln_word_plus,
@@ -142,7 +143,7 @@ enum {
   ln_word_bool_or,
   ln_word_bool_xor,
   
-  ln_word_number, // 46
+  ln_word_number, // 47
   ln_word_name,
   ln_word_string,
   ln_word_null,

@@ -1,14 +1,15 @@
 printf("lann r01, by segfaultdev\n");
 
-array text: 256
+array repl_text: 256
 
 while 1: begin
   printf("> ")
-  get_line(text)
+  get_line(repl_text)
   
-  let value: eval(text)
+  let repl_value: eval(repl_text)
   
-  if value != null: begin
-    printf("= []\n", value)
+  if repl_value != null: begin
+    if type_of(repl_value) = pointer: printf("= \"[]\"\n", repl_value)
+    else: printf("= []\n", repl_value)
   end
 end

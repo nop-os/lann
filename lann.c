@@ -247,6 +247,8 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_eof};
   } else if (ln_case_equal(token, "null")) {
     return (ln_word_t){.type = ln_word_null};
+  } else if (ln_case_equal(token, "lambda")) {
+    return (ln_word_t){.type = ln_word_lambda};
   } else if (ln_case_equal(token, "begin")) {
     return (ln_word_t){.type = ln_word_begin};
   } else if (ln_case_equal(token, "end")) {
@@ -467,16 +469,18 @@ ln_uint_t ln_eval_0(int exec) {
     ln_expect(NULL, ln_word_paren_right);
     
     return value;
-  } else if (ln_expect(NULL, ln_word_begin)) {
+  } else if (ln_expect(NULL, ln_word_lambda)) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
-    ln_uint_t value = ln_eval(exec);
+    ln_uint_t value = ln_eval_expr(exec);
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
     
     return value;
+  } else if (ln_expect(NULL, ln_word_begin)) {
+    return ln_eval(exec);
   } else if (ln_expect(NULL, ln_word_let)) {
     ln_expect(&word, ln_word_name);
     ln_uint_t value = ln_eval_expr(exec);
@@ -809,8 +813,11 @@ ln_uint_t ln_eval_2(int exec) {
   ln_uint_t left = ln_eval_1(exec);
   ln_word_t word;
   
+  int type = LN_VALUE_TYPE(left);
+  left = ln_cast(left, ln_type_number);
+  
   while (ln_expect(&word, ln_word_aster) || ln_expect(&word, ln_word_slash) || ln_expect(&word, ln_word_percent)) {
-    ln_uint_t right = ln_eval_1(exec);
+    ln_uint_t right = ln_cast(ln_eval_1(exec), ln_type_number);
     
     if (exec) {
       if (word.type == ln_word_aster) {
@@ -827,7 +834,7 @@ ln_uint_t ln_eval_2(int exec) {
     }
   }
   
-  return left;
+  return ln_cast(left, type);
 }
 
 ln_uint_t ln_eval_3(int exec) {
@@ -836,8 +843,11 @@ ln_uint_t ln_eval_3(int exec) {
   ln_uint_t left = ln_eval_2(exec);
   ln_word_t word;
   
+  int type = LN_VALUE_TYPE(left);
+  left = ln_cast(left, ln_type_number);
+  
   while (ln_expect(&word, ln_word_plus) || ln_expect(&word, ln_word_minus)) {
-    ln_uint_t right = ln_eval_2(exec);
+    ln_uint_t right = ln_cast(ln_eval_2(exec), ln_type_number);
     
     if (exec) {
       if (word.type == ln_word_plus) {
@@ -848,54 +858,57 @@ ln_uint_t ln_eval_3(int exec) {
     }
   }
   
-  return left;
+  return ln_cast(left, type);
 }
 
 ln_uint_t ln_eval_4(int exec) {
   if (ln_back || ln_break) exec = 0;
   ln_uint_t left = ln_eval_3(exec);
   
+  int type = LN_VALUE_TYPE(left);
+  left = ln_cast(left, ln_type_number);
+  
   for (;;) {
     if (ln_expect(NULL, ln_word_bit_and)) {
-      ln_uint_t right = ln_eval_3(exec);
+      ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) & LN_VALUE_TO_FIXED(right));
     } else if (ln_expect(NULL, ln_word_bit_or)) {
-      ln_uint_t right = ln_eval_3(exec);
+      ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) | LN_VALUE_TO_FIXED(right));
     } else if (ln_expect(NULL, ln_word_bit_xor)) {
-      ln_uint_t right = ln_eval_3(exec);
+      ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) ^ LN_VALUE_TO_FIXED(right));
     } else {
       break;
     }
   }
   
-  return left;
+  return ln_cast(left, type);
 }
 
 ln_uint_t ln_eval_5(int exec) {
   if (ln_back || ln_break) exec = 0;
-  ln_int_t left = ln_eval_4(exec);
+  ln_uint_t left = ln_eval_4(exec);
   
   for (;;) {
     if (ln_expect(NULL, ln_word_equal)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((LN_VALUE_TO_FIXED(left) == LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((left == right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect_2(ln_word_exclam, ln_word_equal)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((LN_VALUE_TO_FIXED(left) != LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((left != right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect_2(ln_word_great, ln_word_equal)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((LN_VALUE_TO_FIXED(left) >= LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((left >= right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect_2(ln_word_less, ln_word_equal)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((LN_VALUE_TO_FIXED(left) <= LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((left <= right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect(NULL, ln_word_great)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((LN_VALUE_TO_FIXED(left) > LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((left > right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect(NULL, ln_word_less)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((LN_VALUE_TO_FIXED(left) < LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((left < right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else {
       break;
     }

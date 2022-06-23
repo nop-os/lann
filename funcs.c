@@ -131,65 +131,77 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
   } else if (hash == ln_hash("exit")) {
     exit(LN_VALUE_TO_INT(ln_get_arg(0)));
     return 1;
-  }
-  
-  return 0;
-}
-
-void repl(void) {
-  char code[256];
-  ln_code = code;
-  
-  printf("lann r01, by segfaultdev\n");
-  
-  for (;;) {
-    printf("> ", ln_context_offset * sizeof(ln_entry_t), LN_CONTEXT_SIZE * sizeof(ln_entry_t));
-    // fflush(stdout);
-    
-    fgets(code, 256, stdin);
-    ln_code_offset = 0;
-    
-    ln_uint_t value = ln_eval(1);
-    
-    if (value != LN_NULL) {
-      printf("= ");
-      print_value(value, 1);
-      
-      printf("\n");
+  } else if (hash == ln_hash("file_size")) {
+    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer) {
+      *value = LN_INVALID_TYPE;
+      return 1;
     }
-  }
-}
-
-int main(int argc, const char **argv) {
-  const char *path = NULL;
-  
-  for (int i = 1; i < argc; i++) {
-    path = argv[i]; // TODO: arguments
-  }
-  
-  if (path) {
+    
+    const char *path = ln_bump + LN_VALUE_TO_PTR(ln_get_arg(0));
     FILE *file = fopen(path, "r");
-    if (!file) return 1;
+    
+    if (!file) {
+      *value = LN_NULL;
+      return 1;
+    }
     
     fseek(file, 0, SEEK_END);
     size_t size = ftell(file);
     
-    char *code = calloc(size + 1, 1);
-    
-    rewind(file);
-    fread(code, 1, size, file);
-    
     fclose(file);
     
-    ln_code = code;
-    ln_code_offset = 0;
+    *value = LN_INT_TO_VALUE(size);
+    return 1;
+  } else if (hash == ln_hash("file_load")) {
+    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(1)) != ln_type_pointer) {
+      *value = LN_INVALID_TYPE;
+      return 1;
+    }
     
-    ln_uint_t value = ln_eval(1);
-    free(code);
+    const char *path = ln_bump + LN_VALUE_TO_PTR(ln_get_arg(0));
+    FILE *file = fopen(path, "r");
     
-    return LN_VALUE_TO_INT(value);
-  } else {
-    repl();
-    return 0;
+    if (!file) {
+      *value = LN_NULL;
+      return 1;
+    }
+    
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    
+    rewind(file);
+    size_t total = fread(ln_bump + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
+    
+    *value = LN_INT_TO_VALUE(total);
+    return 1;
+  } else if (hash == ln_hash("file_save")) {
+    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(1)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(2)) != ln_type_number) {
+      *value = LN_INVALID_TYPE;
+      return 1;
+    }
+    
+    const char *path = ln_bump + LN_VALUE_TO_PTR(ln_get_arg(0));
+    FILE *file = fopen(path, "w");
+    
+    if (!file) {
+      *value = LN_NULL;
+      return 1;
+    }
+    
+    size_t size = (size_t)(LN_VALUE_TO_INT(ln_get_arg(2)));
+    size_t total = fwrite(ln_bump + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
+    
+    *value = LN_INT_TO_VALUE(total);
+    return 1;
+  } else if (hash == ln_hash("file_delete")) {
+    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer) {
+      *value = LN_INVALID_TYPE;
+      return 1;
+    }
+    
+    remove(ln_bump + LN_VALUE_TO_PTR(ln_get_arg(0)));
+    return 1;
   }
+  
+  return 0;
 }
