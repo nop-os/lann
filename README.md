@@ -21,13 +21,13 @@ str_copy(test, "world")
 
 printf("hello, []!\n", test)
 
-func pow: begin
+func pow: block begin
   let base: get(args, 0)
   let exp: get(args, 1)
   
-  if exp = 0: 1
-  else: if exp < 0: 1 / pow(base, -exp)
-  else: pow(base, exp - 1) * base
+  if exp = 0: give 1
+  else if exp < 0: give 1 / pow(base, -exp)
+  else: give pow(base, exp - 1) * base
 end
 
 printf("2 ** 14 = []\n", pow(2, 14))
@@ -56,7 +56,6 @@ If you want to be able to add custom C functions, pass in `-DLN_HANDLE` to GCC. 
 Here are some things you can help with (if you want, of course):
 
 - Make multiplication and division work with bigger numbers (and without using floats).
-- Fix some inconsistencies with `back` and return values (???).
 - Macros with macro-end blocks.
 
 ## Licensing
