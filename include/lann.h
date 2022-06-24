@@ -193,6 +193,8 @@ ln_uint_t ln_bump_text(const char *text);
 ln_uint_t ln_get_arg(int index);
 ln_uint_t ln_cast(ln_uint_t value, int type);
 
+char      ln_keep(int in_string);
+void      ln_skip(char chr, int in_string);
 char      ln_read(int in_string);
 ln_word_t ln_take(void);
 ln_word_t ln_peek(void);

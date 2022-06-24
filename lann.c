@@ -159,7 +159,7 @@ static int ln_space(char chr) {
   return (chr && !(!ln_find_char(": \t\r\n", chr)));
 }
 
-char ln_read(int in_string) {
+char ln_keep(int in_string) {
   if (!in_string) {
     if (ln_code[ln_code_offset] == '#') {
       while (ln_code[ln_code_offset] && ln_code[ln_code_offset] != '\n') ln_code_offset++;
@@ -174,7 +174,18 @@ char ln_read(int in_string) {
   }
   
   if (!ln_code[ln_code_offset]) return LN_CHAR_EOF;
-  return ln_code[ln_code_offset++];
+  return ln_code[ln_code_offset];
+}
+
+void ln_skip(char chr, int in_string) {
+  if ((chr != LN_CHAR_DELIM || in_string) && chr != LN_CHAR_EOF) ln_code_offset++;
+}
+
+char ln_read(int in_string) {
+  char chr = ln_keep(in_string);
+  ln_skip(chr, in_string);
+  
+  return chr;
 }
 
 ln_word_t ln_take(void) {
@@ -204,6 +215,36 @@ ln_word_t ln_take(void) {
         ln_bump[ln_bump_offset++] = '\n';
       } else if (chr == 't') {
         ln_bump[ln_bump_offset++] = '\t';
+      } else if (chr == 'x') {
+        const char *digits = "0123456789ABCDEF";
+        uint8_t value = 0;
+        
+        for (;;) {
+          chr = ln_keep(in_string);
+          const char *ptr;
+          
+          if (!(ptr = ln_find_char(digits, chr))) break;
+          
+          value = (value * 16) + (ptr - digits);
+          ln_skip(chr, in_string);
+        }
+        
+        ln_bump[ln_bump_offset++] = (char)(value);
+      } else if (chr == '0') {
+        const char *digits = "01234567";
+        uint8_t value = 0;
+        
+        for (;;) {
+          chr = ln_keep(in_string);
+          const char *ptr;
+          
+          if (!(ptr = ln_find_char(digits, chr))) break;
+          
+          value = (value * 8) + (ptr - digits);
+          ln_skip(chr, in_string);
+        }
+        
+        ln_bump[ln_bump_offset++] = (char)(value);
       } else {
         ln_bump[ln_bump_offset++] = chr;
       }
