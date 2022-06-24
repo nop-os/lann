@@ -90,9 +90,9 @@ typedef struct ln_word_t ln_word_t;
 typedef struct ln_entry_t ln_entry_t;
 
 enum {
-  ln_word_eof, // 0
+  ln_word_eof,
   
-  ln_word_lambda, // 1
+  ln_word_block,
   ln_word_begin,
   ln_word_end,
   ln_word_func,
@@ -101,16 +101,17 @@ enum {
   ln_word_else,
   ln_word_array,
   ln_word_while,
-  ln_word_back,
+  ln_word_give,
   ln_word_break,
+  ln_word_ref,
   
-  ln_word_args, // 12
+  ln_word_args,
   
-  ln_word_type_number, // 13
+  ln_word_type_number,
   ln_word_type_pointer,
   ln_word_type_error,
   
-  ln_word_func_type_of, // 16
+  ln_word_func_type_of,
   ln_word_func_size_of,
   ln_word_func_to_type,
   ln_word_func_get,
@@ -124,7 +125,7 @@ enum {
   ln_word_func_str_size,
   ln_word_func_eval,
   
-  ln_word_comma, // 29
+  ln_word_comma,
   ln_word_paren_left,
   ln_word_paren_right,
   ln_word_plus,
@@ -143,11 +144,11 @@ enum {
   ln_word_bool_or,
   ln_word_bool_xor,
   
-  ln_word_number, // 47
+  ln_word_number,
   ln_word_name,
   ln_word_string,
   
-  ln_word_null, // 50
+  ln_word_null,
   ln_word_true,
   ln_word_false,
 };
@@ -158,7 +159,7 @@ struct ln_word_t {
 };
 
 struct ln_entry_t {
-  ln_uint_t name, data;
+  ln_uint_t name, offset; // offset to data
 };
 
 extern uint8_t ln_bump[LN_BUMP_SIZE];
@@ -178,6 +179,9 @@ extern const int ln_type_match[];
 char ln_upper(char chr);
 int  ln_digit(char chr);
 
+const char *ln_find_char(const char *str, char chr);
+
+int ln_equal(const char *str_1, const char *str_2);
 int ln_case_equal(const char *str_1, const char *str_2);
 
 ln_uint_t ln_hash(const char *text);

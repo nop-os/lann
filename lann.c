@@ -1,6 +1,4 @@
-#include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 #include <lann.h>
 
@@ -19,11 +17,7 @@ ln_uint_t ln_return = LN_NULL;
 const int ln_type_match[4] = {ln_type_number, ln_type_number, ln_type_pointer, ln_type_error};
 
 #ifndef LN_HANDLE
-
-static int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
-  return 0;
-}
-
+static int ln_func_handle(ln_uint_t *value, ln_uint_t hash) { return 0; }
 #endif
 
 char ln_upper(char chr) {
@@ -33,6 +27,24 @@ char ln_upper(char chr) {
 
 int ln_digit(char chr) {
   return (chr >= '0' && chr <= '9');
+}
+
+const char *ln_find_char(const char *str, char chr) {
+  while (*str) {
+    if (*str == chr) return str;
+    str++;
+  }
+  
+  return NULL;
+}
+
+int ln_equal(const char *str_1, const char *str_2) {
+  for (;;) {
+    if (*str_1 != *str_2) return 0;
+    if (!(*str_1) || !(*str_2)) return 1;
+    
+    str_1++, str_2++;
+  }
 }
 
 int ln_case_equal(const char *str_1, const char *str_2) {
@@ -73,9 +85,9 @@ ln_uint_t ln_fixed(const char *text) {
   else if (ln_upper(*text) == 'X') base = 16, text++;
   
   const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  char *ptr;
+  const char *ptr;
   
-  while (ptr = strchr(digits, ln_upper(*text))) {
+  while (ptr = ln_find_char(digits, ln_upper(*text))) {
     if (!(*ptr)) break;
     
     value = (value * base) + (ptr - digits);
@@ -89,7 +101,7 @@ ln_uint_t ln_fixed(const char *text) {
   
   int factor = base;
   
-  while (ptr = strchr(digits, ln_upper(*text))) {
+  while (ptr = ln_find_char(digits, ln_upper(*text))) {
     if (!(*ptr)) break;
     
     value += ((1 << LN_FIXED_DOT) * (ptr - digits)) / factor;
@@ -144,7 +156,7 @@ ln_uint_t ln_cast(ln_uint_t value, int type) {
 }
 
 static int ln_space(char chr) {
-  return (chr && !(!strchr(": \t\r\n", chr)));
+  return (chr && !(!ln_find_char(": \t\r\n", chr)));
 }
 
 char ln_read(int in_string) {
@@ -199,7 +211,7 @@ ln_word_t ln_take(void) {
       continue;
     }
     
-    if (in_string && strchr("\r\n", chr)) {
+    if (in_string && ln_find_char("\r\n", chr)) {
       continue;
     }
     
@@ -212,7 +224,7 @@ ln_word_t ln_take(void) {
       }
     }
     
-    if (!in_string && strchr(",()+-*/%&|^!<=>", chr)) {
+    if (!in_string && ln_find_char(",()+-*/%&|^!<=>", chr)) {
       if (ln_bump_offset - offset) {
         ln_code_offset--;
       } else {
@@ -229,7 +241,7 @@ ln_word_t ln_take(void) {
   
   if (in_string) {
     for (int i = 0; i < offset; i++) {
-      if (!strcmp(ln_bump + i, ln_bump + offset)) {
+      if (ln_equal(ln_bump + i, ln_bump + offset)) {
         ln_bump_offset = offset;
         offset = i;
         
@@ -251,8 +263,8 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_true};
   } else if (ln_case_equal(token, "false")) {
     return (ln_word_t){.type = ln_word_false};
-  } else if (ln_case_equal(token, "lambda")) {
-    return (ln_word_t){.type = ln_word_lambda};
+  } else if (ln_case_equal(token, "block")) {
+    return (ln_word_t){.type = ln_word_block};
   } else if (ln_case_equal(token, "begin")) {
     return (ln_word_t){.type = ln_word_begin};
   } else if (ln_case_equal(token, "end")) {
@@ -269,10 +281,12 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_array};
   } else if (ln_case_equal(token, "while")) {
     return (ln_word_t){.type = ln_word_while};
-  } else if (ln_case_equal(token, "back")) {
-    return (ln_word_t){.type = ln_word_back};
+  } else if (ln_case_equal(token, "give")) {
+    return (ln_word_t){.type = ln_word_give};
   } else if (ln_case_equal(token, "break")) {
     return (ln_word_t){.type = ln_word_break};
+  } else if (ln_case_equal(token, "ref")) {
+    return (ln_word_t){.type = ln_word_ref};
   } else if (ln_case_equal(token, "args")) {
     return (ln_word_t){.type = ln_word_args};
   } else if (ln_case_equal(token, "number")) {
@@ -434,12 +448,12 @@ ln_uint_t ln_eval_0(int exec) {
               const char *old_code = ln_code;
               ln_uint_t old_offset = ln_code_offset;
               
-              ln_code = ln_bump + LN_VALUE_TO_PTR(ln_context[i].data);
+              ln_code = ln_bump + LN_VALUE_TO_PTR(*((ln_uint_t *)(ln_bump + ln_context[i].offset)));
               ln_code_offset = 0;
               
-              ln_return = LN_NULL;
-              
               value = ln_eval_stat(1);
+              if (ln_back) value = ln_return;
+              
               ln_back = 0;
               
               ln_code = old_code;
@@ -459,7 +473,7 @@ ln_uint_t ln_eval_0(int exec) {
       if (exec) {
         for (int i = ln_context_offset - 1; i >= 0; i--) {
           if (ln_context[i].name == word.data) {
-            return ln_context[i].data;
+            return *((ln_uint_t *)(ln_bump + ln_context[i].offset));
           }
         }
         
@@ -473,11 +487,16 @@ ln_uint_t ln_eval_0(int exec) {
     ln_expect(NULL, ln_word_paren_right);
     
     return value;
-  } else if (ln_expect(NULL, ln_word_lambda)) {
+  } else if (ln_expect(NULL, ln_word_block)) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
     ln_uint_t value = ln_eval_expr(exec);
+    
+    if (exec) {
+      if (ln_back) value = ln_return;
+      ln_back = 0;
+    }
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
@@ -494,7 +513,7 @@ ln_uint_t ln_eval_0(int exec) {
       
       for (int i = ln_context_offset - 1; i >= 0; i--) {
         if (ln_context[i].name == word.data) {
-          ln_context[i].data = value;
+          *((ln_uint_t *)(ln_bump + ln_context[i].offset)) = value;
           found = 1;
           
           break;
@@ -504,7 +523,7 @@ ln_uint_t ln_eval_0(int exec) {
       if (!found) {
         ln_context[ln_context_offset++] = (ln_entry_t){
           .name = word.data,
-          .data = value
+          .offset = ln_bump_value(value)
         };
       }
     }
@@ -532,7 +551,7 @@ ln_uint_t ln_eval_0(int exec) {
       
       ln_context[ln_context_offset++] = (ln_entry_t){
         .name = word.data,
-        .data = LN_PTR_TO_VALUE(offset)
+        .offset = ln_bump_value(LN_PTR_TO_VALUE(offset))
       };
     }
     
@@ -549,7 +568,7 @@ ln_uint_t ln_eval_0(int exec) {
       
       ln_context[ln_context_offset++] = (ln_entry_t){
         .name = word.data,
-        .data = LN_PTR_TO_VALUE(offset)
+        .offset = ln_bump_value(LN_PTR_TO_VALUE(offset))
       };
       
       return LN_PTR_TO_VALUE(offset);
@@ -750,7 +769,7 @@ ln_uint_t ln_eval_0(int exec) {
     
     if (LN_VALUE_TYPE(ptr_1) != ln_type_pointer || LN_VALUE_TYPE(ptr_2) != ln_type_pointer) return LN_INVALID_TYPE;
     
-    if (exec) return LN_INT_TO_VALUE(!strcmp(ln_bump + LN_VALUE_TO_PTR(ptr_1), ln_bump + LN_VALUE_TO_PTR(ptr_2)));
+    if (exec) return LN_INT_TO_VALUE(ln_equal(ln_bump + LN_VALUE_TO_PTR(ptr_1), ln_bump + LN_VALUE_TO_PTR(ptr_2)));
     else return LN_NULL;
   } else if (ln_expect(NULL, ln_word_func_str_size)) {
     ln_expect(NULL, ln_word_paren_left);
@@ -786,16 +805,36 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_back)) {
-    if (exec) ln_back = 1;
-    return ln_return;
+  } else if (ln_expect(NULL, ln_word_give)) {
+    ln_uint_t value = ln_eval_expr(exec);
+    
+    if (exec) {
+      ln_return = value;
+      ln_back = 1;
+    }
+    
+    return LN_NULL;
   } else if (ln_expect(NULL, ln_word_break)) {
     if (exec) ln_break = 1;
-    return ln_return;
+    return LN_NULL;
   } else if (ln_expect(NULL, ln_word_true)) {
     return LN_INT_TO_VALUE(1);
   } else if (ln_expect(NULL, ln_word_false)) {
     return LN_INT_TO_VALUE(0);
+  } else if (ln_expect(NULL, ln_word_ref)) {
+    ln_expect(&word, ln_word_name);
+    
+    if (exec) {
+      for (int i = ln_context_offset - 1; i >= 0; i--) {
+        if (ln_context[i].name == word.data) {
+          return LN_PTR_TO_VALUE(ln_context[i].offset);
+        }
+      }
+      
+      return LN_UNDEFINED;
+    } else {
+      return LN_NULL;
+    }
   }
   
   return LN_NULL;
@@ -951,7 +990,6 @@ ln_uint_t ln_eval_expr(int exec) {
   if (ln_back || ln_break) exec = 0;
   ln_uint_t value = ln_eval_6(exec);
   
-  if (exec) ln_return = value;
   return value;
 }
 
@@ -963,7 +1001,7 @@ ln_uint_t ln_eval_stat(int exec) {
     value = ln_eval_expr(exec);
   }
   
-  return ln_return;
+  return value;
 }
 
 ln_uint_t ln_eval(int exec) {
@@ -974,5 +1012,5 @@ ln_uint_t ln_eval(int exec) {
     value = ln_eval_stat(exec);
   }
   
-  return ln_return;
+  return value;
 }
