@@ -27,7 +27,11 @@ int main(int argc, const char **argv) {
   ln_code = code;
   ln_code_offset = 0;
   
-  ln_uint_t value = ln_eval(1);
+  ln_uint_t value = LN_INT_TO_VALUE(0);
+  
+  ln_eval(1);
+  if (ln_back) value = ln_return;
+  
   free(code);
   
   return LN_VALUE_TO_INT(value);
