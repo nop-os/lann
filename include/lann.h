@@ -14,6 +14,7 @@
 // str_copy(ptr_1, ptr_2)
 // str_test(ptr_1, ptr_2)
 // str_size(ptr)
+// str_format(ptr, ...)
 // eval(ptr)
 
 // args -> built-in pointer :D
@@ -46,25 +47,25 @@
 #define LN_VALUE_TYPE_RAW(x) ((x) >> (8 * sizeof(x) - 2))
 #define LN_VALUE_TYPE(x) (ln_type_match[LN_VALUE_TYPE_RAW((x))])
 
-#define LN_VALUE_SIGN(x)   ((x) >> (8 * sizeof(x) - 2))
-#define LN_VALUE_ABS(x)    ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
+#define LN_VALUE_SIGN(x)   (((x) >> (8 * sizeof(x) - 2)) & 1)
+#define LN_VALUE_ABS(x)    (LN_FIXED_TO_VALUE(LN_FIXED_ABS(LN_VALUE_TO_FIXED((x)))))
 
 #define LN_VALUE_TO_RAW(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 1)) - 1))
-#define LN_VALUE_TO_FIXED(x) ((ln_int_t)(LN_VALUE_ABS((x))) * (LN_VALUE_SIGN(LN_VALUE_TO_RAW((x))) ? -1 : 1))
+#define LN_VALUE_TO_FIXED(x) ((ln_int_t)((x) | (LN_VALUE_SIGN((x)) << (8 * sizeof(x) - 1))))
 #define LN_VALUE_TO_INT(x)   (LN_VALUE_TO_FIXED((x)) / (1 << LN_FIXED_DOT))
 
-#define LN_FIXED_SIGN(x) ((ln_uint_t)((x) < 0))
-#define LN_FIXED_ABS(x)  ((x) < 0 ? -(x) : (x))
+#define LN_FIXED_SIGN(x) ((ln_uint_t)((x)) >> (8 * sizeof(x) - 1))
+#define LN_FIXED_ABS(x)  (LN_FIXED_SIGN((x)) ? -(x) : (x))
 
 #define LN_VALUE_NEGATE(x) (LN_FIXED_TO_VALUE(-LN_VALUE_TO_FIXED((x))))
 
-#define LN_FIXED_TO_VALUE(x) ((ln_uint_t)(LN_FIXED_ABS((x))) | (LN_FIXED_SIGN((x)) << (8 * sizeof(x) - 2)))
+#define LN_FIXED_TO_VALUE(x) (((ln_uint_t)((x)) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1)) | (LN_FIXED_SIGN((x)) << (8 * sizeof(x) - 2)))
 #define LN_INT_TO_VALUE(x)   (LN_FIXED_TO_VALUE((ln_int_t)((x)) * (1 << LN_FIXED_DOT)))
 
-#define LN_VALUE_TO_PTR(x) (LN_VALUE_ABS((x)))
+#define LN_VALUE_TO_PTR(x) ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
 #define LN_PTR_TO_VALUE(x) ((x) | ((ln_uint_t)(1) << (8 * sizeof(x) - 1)))
 
-#define LN_VALUE_TO_ERR(x) (LN_VALUE_ABS((x)))
+#define LN_VALUE_TO_ERR(x) ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
 #define LN_ERR_TO_VALUE(x) (LN_PTR_TO_VALUE((x)) | ((ln_uint_t)(1) << (8 * sizeof(x) - 2)))
 
 // note: floating point operations are not recommended, as it requires a software floating point implementation or an FPU, and not everyone has those :p
@@ -123,6 +124,7 @@ enum {
   ln_word_func_str_copy,
   ln_word_func_str_test,
   ln_word_func_str_size,
+  ln_word_func_str_format,
   ln_word_func_eval,
   
   ln_word_comma,
@@ -189,6 +191,8 @@ ln_uint_t ln_fixed(const char *text);
 
 ln_uint_t ln_bump_value(ln_uint_t value);
 ln_uint_t ln_bump_text(const char *text);
+void      ln_bump_text_fixed(ln_int_t fixed, int first);
+void      ln_bump_text_int(ln_int_t value, int first);
 
 ln_uint_t ln_get_arg(int index);
 ln_uint_t ln_cast(ln_uint_t value, int type);

@@ -56,6 +56,10 @@ If you want to be able to add custom C functions, pass in `-DLN_HANDLE` to GCC. 
 Here are some things you can help with (if you want, of course):
 
 - Make multiplication and division work with bigger numbers (and without using floats).
+- Fix parsing result of str_format() directly onto a function (tested on printf()) as an argument.
+- Add bound checks to everything pointer-related.
+- Add size limits and clean error messages for when memory is full.
+- Remove memmove() dependency on str_format().
 - Macros with macro-end blocks.
 
 ## Licensing
