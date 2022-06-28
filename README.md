@@ -1,10 +1,17 @@
 # lann
 
-lann is an embeddable, dynamically typed programming language that focuses on its ease of use and simplicity, while minimizing RAM usage to a bare minimum (lann can run on devices with as little as 384 bytes of RAM, probably less with some limitations). This, plus its minimal standard library requirements, allows it to run on almost every single computer and microcontroller out there, ranging from small ATtinys to modern Linux computers.
+lann is an embeddable, dynamically typed programming language that focuses on its ease of use and simplicity, while minimizing RAM usage to a bare minimum (as of its latest version, lann can run on devices with as little as 768 bytes of RAM, probably less with some limitations). This, plus its minimal standard library requirements, allows it to run on almost every single computer and microcontroller out there, ranging from small ATtinys to modern Linux computers.
 
 We (or rather, I) are slowly trying to add more safety protections to lann, so eventually it could be used anywhere without any safety concerns regarding memory access with pointers and buffer overflowing.
 
 Note that currently lann is a project fully maintained by a single person, so slow progress is expected.
+
+## Features
+
+- Minimal RAM usage (only 768 bytes minimum).
+- Fast and simple interpreter (no intermediate representations, code is ran as it's being lexed and parsed).
+- Fully embeddable, minimal standard library requirements and 100% written in C.
+- Built-in and custom heap allocator and stack for safe and sandboxed memory access.
 
 ## Example
 
@@ -59,7 +66,6 @@ Here are some things you can help with (if you want, of course):
 - Add bound checks to everything pointer-related.
 - Add size limits and clean error messages for when memory is full.
 - Remove memmove() dependency on str_format().
-- Add a separate heap with a custom allocator, mem_alloc(), mem_realloc() and mem_free().
 - Macros with macro-end blocks.
 
 ## Licensing

@@ -11,6 +11,9 @@
 // mem_write(ptr, byte)
 // mem_copy(ptr_1, ptr_2, count)
 // mem_test(ptr_1, ptr_2, count)
+// mem_alloc(size)
+// mem_realloc(ptr, size)
+// mem_free(ptr)
 // str_copy(ptr_1, ptr_2)
 // str_test(ptr_1, ptr_2)
 // str_size(ptr)
@@ -37,8 +40,12 @@
 #define LN_BUMP_SIZE 4096
 #endif
 
+#ifndef LN_HEAP_SIZE
+#define LN_HEAP_SIZE 24576
+#endif
+
 #ifndef LN_CONTEXT_SIZE
-#define LN_CONTEXT_SIZE 512
+#define LN_CONTEXT_SIZE 256
 #endif
 
 #define LN_CHAR_DELIM ' '
@@ -87,8 +94,8 @@ enum {
 };
 
 typedef struct ln_word_t ln_word_t;
-
 typedef struct ln_entry_t ln_entry_t;
+typedef struct ln_heap_t ln_heap_t;
 
 enum {
   ln_word_eof,
@@ -121,6 +128,9 @@ enum {
   ln_word_func_mem_write,
   ln_word_func_mem_copy,
   ln_word_func_mem_test,
+  ln_word_func_mem_alloc,
+  ln_word_func_mem_realloc,
+  ln_word_func_mem_free,
   ln_word_func_str_copy,
   ln_word_func_str_test,
   ln_word_func_str_size,
@@ -164,8 +174,19 @@ struct ln_entry_t {
   ln_uint_t name, offset; // offset to data
 };
 
-extern uint8_t ln_bump[LN_BUMP_SIZE];
+struct ln_heap_t {
+  ln_uint_t size: (sizeof(ln_uint_t) << 3) - 1;
+  ln_uint_t free: 1;
+  
+  uint8_t data[];
+};
+
+extern uint8_t ln_data[LN_BUMP_SIZE + LN_HEAP_SIZE];
 extern ln_uint_t ln_bump_offset, ln_bump_args;
+
+extern uint8_t *ln_heap;
+extern ln_uint_t ln_heap_used;
+extern int ln_heap_inited;
 
 extern ln_entry_t ln_context[LN_CONTEXT_SIZE];
 extern ln_uint_t ln_context_offset;
@@ -193,6 +214,12 @@ int ln_case_equal(const char *str_1, const char *str_2);
 
 ln_uint_t ln_hash(const char *text);
 ln_uint_t ln_fixed(const char *text);
+
+void      ln_heap_init(void);
+void      ln_heap_defrag(void);
+ln_uint_t ln_heap_alloc(ln_uint_t size);
+ln_uint_t ln_heap_realloc(ln_uint_t ptr, ln_uint_t new_size);
+void      ln_heap_free(ln_uint_t ptr);
 
 ln_uint_t ln_bump_value(ln_uint_t value);
 ln_uint_t ln_bump_text(const char *text);

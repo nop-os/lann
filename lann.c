@@ -3,8 +3,12 @@
 #include <stdio.h>
 #include <lann.h>
 
-uint8_t ln_bump[LN_BUMP_SIZE];
+uint8_t ln_data[LN_BUMP_SIZE + LN_HEAP_SIZE];
 ln_uint_t ln_bump_offset = 0, ln_bump_args = 0;
+
+uint8_t *ln_heap = ln_data + LN_BUMP_SIZE;
+ln_uint_t ln_heap_used = 0;
+int ln_heap_inited = 0;
 
 ln_entry_t ln_context[LN_CONTEXT_SIZE];
 ln_uint_t ln_context_offset = 0;
@@ -119,8 +123,81 @@ ln_uint_t ln_fixed(const char *text) {
   return value;
 }
 
+void ln_heap_init(void) {
+  ln_heap_inited = 1;
+  
+  ln_heap_t *block = (ln_heap_t *)(ln_heap);
+  
+  block->size = LN_HEAP_SIZE - sizeof(ln_heap_t);
+  block->free = 1;
+  
+  ln_heap_used = sizeof(ln_heap_t);
+}
+
+void ln_heap_defrag(void) {
+  // TODO: defragmentation
+}
+
+ln_uint_t ln_heap_alloc(ln_uint_t size) {
+  if (!ln_heap_inited) ln_heap_init();
+  ln_heap_t *block = (ln_heap_t *)(ln_heap);
+  
+  printf("allocating block of %llu bytes...\n", size);
+  
+  while ((uint8_t *)(block) < ln_heap + LN_HEAP_SIZE) {
+    if (block->free) {
+      if (block->size == size) {
+        block->free = 0;
+        
+        ln_heap_used += size;
+        return LN_PTR_TO_VALUE((uint8_t *)(block) - ln_data);
+      } else if (block->size >= size + sizeof(ln_heap_t)) {
+        ln_heap_t *new_block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + size);
+        ln_uint_t old_size = block->size;
+        
+        block->size = size;
+        block->free = 0;
+        
+        new_block->size = old_size - (block->size + sizeof(ln_heap_t));
+        new_block->free = 1;
+        
+        ln_heap_used += size + sizeof(ln_heap_t);
+        return LN_PTR_TO_VALUE((uint8_t *)(block) - ln_data);
+      }
+    }
+    
+    block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + block->size);
+  }
+  
+  return LN_NULL;
+}
+
+ln_uint_t ln_heap_realloc(ln_uint_t ptr, ln_uint_t new_size) {
+  if (!ln_heap_inited) ln_heap_init();
+  if (ptr == LN_NULL) return ln_heap_alloc(new_size);
+  
+  ln_uint_t new_ptr = ln_heap_alloc(new_size);
+  if (new_ptr == LN_NULL) return LN_NULL;
+  
+  ln_heap_t *block = (ln_heap_t *)(ln_data + LN_VALUE_TO_PTR(new_ptr));
+  memcpy(ln_data + LN_VALUE_TO_PTR(new_ptr), ln_data + LN_VALUE_TO_PTR(ptr), block->size < new_size ? block->size : new_size);
+  
+  return new_ptr;
+}
+
+void ln_heap_free(ln_uint_t ptr) {
+  if (!ln_heap_inited) ln_heap_init();
+  if (ptr == LN_NULL) return;
+  
+  ln_heap_t *block = (ln_heap_t *)(ln_data + LN_VALUE_TO_PTR(ptr));
+  block->free = 1;
+  
+  ln_heap_used -= block->size;
+  ln_heap_defrag();
+}
+
 ln_uint_t ln_bump_value(ln_uint_t value) {
-  memcpy(ln_bump + ln_bump_offset, &value, sizeof(ln_uint_t));
+  memcpy(ln_data + ln_bump_offset, &value, sizeof(ln_uint_t));
   
   ln_uint_t offset = ln_bump_offset;
   ln_bump_offset += sizeof(ln_uint_t);
@@ -131,7 +208,7 @@ ln_uint_t ln_bump_value(ln_uint_t value) {
 ln_uint_t ln_bump_text(const char *text) {
   ln_uint_t length = strlen(text);
   
-  memcpy(ln_bump + ln_bump_offset, text, length + 1);
+  memcpy(ln_data + ln_bump_offset, text, length + 1);
   
   ln_uint_t offset = ln_bump_offset;
   ln_bump_offset += length + 1;
@@ -141,7 +218,7 @@ ln_uint_t ln_bump_text(const char *text) {
 
 void ln_bump_text_fixed(ln_int_t fixed, int first) {
   if (fixed < 0) {
-    ln_bump[ln_bump_offset++] = '-';
+    ln_data[ln_bump_offset++] = '-';
     fixed = -fixed;
   }
   
@@ -150,17 +227,17 @@ void ln_bump_text_fixed(ln_int_t fixed, int first) {
   int digit = (fixed >> LN_FIXED_DOT) % 10;
   if (fixed >> LN_FIXED_DOT) ln_bump_text_fixed(fixed / 10, 0);
   
-  ln_bump[ln_bump_offset++] = '0' + digit;
+  ln_data[ln_bump_offset++] = '0' + digit;
   if (!first) return;
   
   fixed = (fixed % (1 << LN_FIXED_DOT)) * 10;
   
   if (!fixed) return;
-  ln_bump[ln_bump_offset++] = '.';
+  ln_data[ln_bump_offset++] = '.';
   
   for (int i = 0; i < 7; i++) {
     digit = (fixed >> LN_FIXED_DOT) % 10;
-    ln_bump[ln_bump_offset++] = '0' + digit;
+    ln_data[ln_bump_offset++] = '0' + digit;
     
     if (!(fixed % (1 << LN_FIXED_DOT))) break;
     fixed *= 10;
@@ -169,7 +246,7 @@ void ln_bump_text_fixed(ln_int_t fixed, int first) {
 
 void ln_bump_text_int(ln_int_t value, int first) {
   if (value < 0) {
-    ln_bump[ln_bump_offset++] = '-';
+    ln_data[ln_bump_offset++] = '-';
     value = -value;
   }
   
@@ -178,11 +255,11 @@ void ln_bump_text_int(ln_int_t value, int first) {
   int digit = value % 10;
   if (value) ln_bump_text_int(value / 10, 0);
   
-  ln_bump[ln_bump_offset++] = '0' + digit;
+  ln_data[ln_bump_offset++] = '0' + digit;
 }
 
 ln_uint_t ln_get_arg(int index) {
-  return ((ln_uint_t *)(ln_bump + ln_bump_args))[index];
+  return ((ln_uint_t *)(ln_data + ln_bump_args))[index];
 }
 
 ln_uint_t ln_cast(ln_uint_t value, int type) {
@@ -251,7 +328,7 @@ ln_word_t ln_take(void) {
   }
   
   ln_uint_t offset = ln_bump_offset;
-  char *token = ln_bump + offset;
+  char *token = ln_data + offset;
   
   int in_string = 0;
   
@@ -271,11 +348,11 @@ ln_word_t ln_take(void) {
       chr = ln_read(in_string);
       
       if (chr == 'r') {
-        ln_bump[ln_bump_offset++] = '\r';
+        ln_data[ln_bump_offset++] = '\r';
       } else if (chr == 'n') {
-        ln_bump[ln_bump_offset++] = '\n';
+        ln_data[ln_bump_offset++] = '\n';
       } else if (chr == 't') {
-        ln_bump[ln_bump_offset++] = '\t';
+        ln_data[ln_bump_offset++] = '\t';
       } else if (chr == 'x') {
         const char *digits = "0123456789ABCDEF";
         uint8_t value = 0;
@@ -291,7 +368,7 @@ ln_word_t ln_take(void) {
           ln_skip(chr, in_string);
         }
         
-        ln_bump[ln_bump_offset++] = (char)(value);
+        ln_data[ln_bump_offset++] = (char)(value);
       } else if (chr == '0') {
         const char *digits = "01234567";
         uint8_t value = 0;
@@ -306,9 +383,9 @@ ln_word_t ln_take(void) {
           ln_skip(chr, in_string);
         }
         
-        ln_bump[ln_bump_offset++] = (char)(value);
+        ln_data[ln_bump_offset++] = (char)(value);
       } else {
-        ln_bump[ln_bump_offset++] = chr;
+        ln_data[ln_bump_offset++] = chr;
       }
       
       continue;
@@ -331,16 +408,16 @@ ln_word_t ln_take(void) {
       if (ln_bump_offset - offset) {
         ln_code_offset--;
       } else {
-        ln_bump[ln_bump_offset++] = chr;
+        ln_data[ln_bump_offset++] = chr;
       }
       
       break;
     }
     
-    ln_bump[ln_bump_offset++] = chr;
+    ln_data[ln_bump_offset++] = chr;
   }
   
-  ln_bump[ln_bump_offset++] = '\0';
+  ln_data[ln_bump_offset++] = '\0';
   
   ln_last_curr = ln_code_offset;
   ln_last_next = ln_code_offset;
@@ -409,6 +486,12 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_func_mem_copy};
   } else if (ln_case_equal(token, "mem_test")) {
     return (ln_word_t){.type = ln_word_func_mem_test};
+  } else if (ln_case_equal(token, "mem_alloc")) {
+    return (ln_word_t){.type = ln_word_func_mem_alloc};
+  } else if (ln_case_equal(token, "mem_realloc")) {
+    return (ln_word_t){.type = ln_word_func_mem_realloc};
+  } else if (ln_case_equal(token, "mem_free")) {
+    return (ln_word_t){.type = ln_word_func_mem_free};
   } else if (ln_case_equal(token, "str_copy")) {
     return (ln_word_t){.type = ln_word_func_str_copy};
   } else if (ln_case_equal(token, "str_test")) {
@@ -458,7 +541,7 @@ ln_word_t ln_take(void) {
   } else if (ln_digit(token[0])) {
     return (ln_word_t){.type = ln_word_number, .data = ln_fixed(token)};
   } else {
-    return (ln_word_t){.type = ln_word_name, .data = ln_hash(ln_bump + offset)};
+    return (ln_word_t){.type = ln_word_name, .data = ln_hash(ln_data + offset)};
   }
 }
 
@@ -586,7 +669,7 @@ ln_uint_t ln_eval_0(int exec) {
             ln_uint_t old_last_curr = ln_last_curr;
             ln_uint_t old_last_next = ln_last_next;
             
-            ln_code = ln_bump + LN_VALUE_TO_PTR(*((ln_uint_t *)(ln_bump + ln_context[i].offset)));
+            ln_code = ln_data + LN_VALUE_TO_PTR(*((ln_uint_t *)(ln_data + ln_context[i].offset)));
             ln_code_offset = 0;
             
             ln_last_curr = 0;
@@ -617,7 +700,7 @@ ln_uint_t ln_eval_0(int exec) {
       if (exec) {
         for (int i = ln_context_offset - 1; i >= 0; i--) {
           if (ln_context[i].name == word.data) {
-            return *((ln_uint_t *)(ln_bump + ln_context[i].offset));
+            return *((ln_uint_t *)(ln_data + ln_context[i].offset));
           }
         }
         
@@ -657,7 +740,7 @@ ln_uint_t ln_eval_0(int exec) {
       
       for (int i = ln_context_offset - 1; i >= 0; i--) {
         if (ln_context[i].name == word.data) {
-          *((ln_uint_t *)(ln_bump + ln_context[i].offset)) = value;
+          *((ln_uint_t *)(ln_data + ln_context[i].offset)) = value;
           found = 1;
           
           break;
@@ -688,10 +771,10 @@ ln_uint_t ln_eval_0(int exec) {
     
     if (exec) {
       for (int i = code_start; i < code_end; i++) {
-        ln_bump[ln_bump_offset++] = ln_code[i];
+        ln_data[ln_bump_offset++] = ln_code[i];
       }
       
-      ln_bump[ln_bump_offset++] = '\0';
+      ln_data[ln_bump_offset++] = '\0';
       
       ln_context[ln_context_offset++] = (ln_entry_t){
         .name = word.data,
@@ -731,7 +814,7 @@ ln_uint_t ln_eval_0(int exec) {
     if (ln_context_offset == context_offset) ln_bump_offset = bump_offset;
     
     if (exec) {
-      if (LN_VALUE_TYPE(value) == ln_type_pointer) cond = ln_bump[LN_VALUE_TO_PTR(value)];
+      if (LN_VALUE_TYPE(value) == ln_type_pointer) cond = ln_data[LN_VALUE_TO_PTR(value)];
       if (LN_VALUE_TYPE(value) == ln_type_error) cond = 0;
     }
     
@@ -846,7 +929,7 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     if (exec) {
-      ln_uint_t value = *((ln_uint_t *)(ln_bump + LN_VALUE_TO_PTR(ptr) + (LN_VALUE_TO_INT(index) * sizeof(ln_uint_t))));
+      ln_uint_t value = *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr) + (LN_VALUE_TO_INT(index) * sizeof(ln_uint_t))));
       
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
@@ -880,7 +963,7 @@ ln_uint_t ln_eval_0(int exec) {
       return LN_INVALID_TYPE;
     }
     
-    if (exec) *((ln_uint_t *)(ln_bump + LN_VALUE_TO_PTR(ptr) + (LN_VALUE_TO_INT(index) * sizeof(ln_uint_t)))) = value;
+    if (exec) *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr) + (LN_VALUE_TO_INT(index) * sizeof(ln_uint_t)))) = value;
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
@@ -903,7 +986,7 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     if (exec) {
-      ln_uint_t value = LN_INT_TO_VALUE(ln_bump[LN_VALUE_TO_PTR(ptr)]);
+      ln_uint_t value = LN_INT_TO_VALUE(ln_data[LN_VALUE_TO_PTR(ptr)]);
       
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
@@ -934,7 +1017,7 @@ ln_uint_t ln_eval_0(int exec) {
       return LN_INVALID_TYPE;
     }
     
-    if (exec) ln_bump[LN_VALUE_TO_PTR(ptr)] = LN_VALUE_TO_INT(value);
+    if (exec) ln_data[LN_VALUE_TO_PTR(ptr)] = LN_VALUE_TO_INT(value);
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
@@ -962,7 +1045,7 @@ ln_uint_t ln_eval_0(int exec) {
       return LN_INVALID_TYPE;
     }
     
-    if (exec) memcpy(ln_bump + LN_VALUE_TO_PTR(ptr_1), ln_bump + LN_VALUE_TO_PTR(ptr_2), LN_VALUE_TO_INT(count));
+    if (exec) memcpy(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2), LN_VALUE_TO_INT(count));
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
@@ -991,13 +1074,84 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     int equal = 0;
-    if (exec) equal = !memcmp(ln_bump + LN_VALUE_TO_PTR(ptr_1), ln_bump + LN_VALUE_TO_PTR(ptr_2), LN_VALUE_TO_INT(count));
+    if (exec) equal = !memcmp(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2), LN_VALUE_TO_INT(count));
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
     
     if (exec) return LN_INT_TO_VALUE(equal);
     else return LN_NULL;
+  } else if (ln_expect(NULL, ln_word_func_mem_alloc)) {
+    ln_uint_t context_offset = ln_context_offset;
+    ln_uint_t bump_offset = ln_bump_offset;
+    
+    ln_expect(NULL, ln_word_paren_left);
+    
+    ln_uint_t size = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_paren_right);
+    
+    if (LN_VALUE_TYPE(size) != ln_type_number) {
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_INVALID_TYPE;
+    }
+    
+    ln_uint_t ptr = LN_NULL;
+    if (exec) ptr = ln_heap_alloc(LN_VALUE_TO_INT(size));
+    
+    ln_context_offset = context_offset;
+    ln_bump_offset = bump_offset;
+    
+    return ptr;
+  } else if (ln_expect(NULL, ln_word_func_mem_realloc)) {
+    ln_uint_t context_offset = ln_context_offset;
+    ln_uint_t bump_offset = ln_bump_offset;
+    
+    ln_expect(NULL, ln_word_paren_left);
+    
+    ln_uint_t ptr = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_comma);
+    
+    ln_uint_t size = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_paren_right);
+    
+    if (LN_VALUE_TYPE(ptr) != ln_type_pointer || LN_VALUE_TYPE(size) != ln_type_number) {
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_INVALID_TYPE;
+    }
+    
+    ln_uint_t new_ptr = LN_NULL;
+    if (exec) new_ptr = ln_heap_realloc(ptr, LN_VALUE_TO_INT(size));
+    
+    ln_context_offset = context_offset;
+    ln_bump_offset = bump_offset;
+    
+    return new_ptr;
+  } else if (ln_expect(NULL, ln_word_func_mem_free)) {
+    ln_uint_t context_offset = ln_context_offset;
+    ln_uint_t bump_offset = ln_bump_offset;
+    
+    ln_expect(NULL, ln_word_paren_left);
+    
+    ln_uint_t ptr = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_paren_right);
+    
+    if (LN_VALUE_TYPE(ptr) != ln_type_pointer) {
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_INVALID_TYPE;
+    }
+    
+    if (exec) ln_heap_free(ptr);
+    
+    ln_context_offset = context_offset;
+    ln_bump_offset = bump_offset;
+    
+    return LN_NULL;
   } else if (ln_expect(NULL, ln_word_func_str_copy)) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
@@ -1018,12 +1172,12 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     if (exec) {
-      strcpy(ln_bump + LN_VALUE_TO_PTR(ptr_1), ln_bump + LN_VALUE_TO_PTR(ptr_2));
+      strcpy(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2));
       
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
       
-      return strlen(ln_bump + LN_VALUE_TO_PTR(ptr_1));
+      return strlen(ln_data + LN_VALUE_TO_PTR(ptr_1));
     }
     
     ln_context_offset = context_offset;
@@ -1050,7 +1204,7 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     int equal = 0;
-    if (exec) equal = ln_equal(ln_bump + LN_VALUE_TO_PTR(ptr_1), ln_bump + LN_VALUE_TO_PTR(ptr_2));
+    if (exec) equal = ln_equal(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2));
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
@@ -1068,7 +1222,7 @@ ln_uint_t ln_eval_0(int exec) {
     
     if (LN_VALUE_TYPE(ptr) != ln_type_pointer) return LN_INVALID_TYPE;
     
-    int length = strlen(ln_bump + LN_VALUE_TO_PTR(ptr));
+    int length = strlen(ln_data + LN_VALUE_TO_PTR(ptr));
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
@@ -1091,7 +1245,7 @@ ln_uint_t ln_eval_0(int exec) {
       ln_uint_t old_last_curr = ln_last_curr;
       ln_uint_t old_last_next = ln_last_next;
       
-      ln_code = ln_bump + LN_VALUE_TO_PTR(ptr);
+      ln_code = ln_data + LN_VALUE_TO_PTR(ptr);
       ln_code_offset = 0;
       
       ln_last_curr = 0;
@@ -1175,7 +1329,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_uint_t offset = ln_bump_offset;
     count = 0;
     
-    char *format = ln_bump + LN_VALUE_TO_PTR(args[count]);
+    char *format = ln_data + LN_VALUE_TO_PTR(args[count]);
     count++;
     
     while (*format) {
@@ -1183,7 +1337,7 @@ ln_uint_t ln_eval_0(int exec) {
         format++;
         
         if (*format == '[') {
-          ln_bump[ln_bump_offset++] = '[';
+          ln_data[ln_bump_offset++] = '[';
         } else {
           ln_uint_t value = args[count++];
           int type = LN_VALUE_TYPE(value);
@@ -1191,7 +1345,7 @@ ln_uint_t ln_eval_0(int exec) {
           if (type == ln_type_number) {
             ln_bump_text_fixed(LN_VALUE_TO_FIXED(value), 1);
           } else if (type == ln_type_pointer) {
-            ln_bump_text(ln_bump + LN_VALUE_TO_PTR(value));
+            ln_bump_text(ln_data + LN_VALUE_TO_PTR(value));
             ln_bump_offset--;
           } else if (value == LN_NULL) {
             ln_bump_text("[null]");
@@ -1210,19 +1364,19 @@ ln_uint_t ln_eval_0(int exec) {
             ln_bump_offset--;
             
             ln_bump_text_int(LN_VALUE_TO_ERR(value), 1);
-            ln_bump[ln_bump_offset++] = ']';
+            ln_data[ln_bump_offset++] = ']';
           }
         }
       } else {
-        ln_bump[ln_bump_offset++] = *format;
+        ln_data[ln_bump_offset++] = *format;
       }
       
       format++;
     }
     
-    ln_bump[ln_bump_offset++] = '\0';
+    ln_data[ln_bump_offset++] = '\0';
     
-    memmove(ln_bump + bump_offset, ln_bump + offset, ln_bump_offset - offset);
+    memmove(ln_data + bump_offset, ln_data + offset, ln_bump_offset - offset);
     ln_bump_offset = bump_offset + (ln_bump_offset - offset);
     
     return LN_PTR_TO_VALUE(bump_offset);

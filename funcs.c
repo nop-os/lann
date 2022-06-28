@@ -39,9 +39,9 @@ void print_value(ln_uint_t value, int result) {
     print_fixed(LN_FIXED_ABS(LN_VALUE_TO_FIXED(value)), 1);
   } else if (type == ln_type_pointer) {
     if (result) {
-      printf("\"%s\"", ln_bump + LN_VALUE_TO_PTR(value));
+      printf("\"%s\"", ln_data + LN_VALUE_TO_PTR(value));
     } else {
-      printf("%s", ln_bump + LN_VALUE_TO_PTR(value));
+      printf("%s", ln_data + LN_VALUE_TO_PTR(value));
     }
   } else if (value == LN_NULL) {
     printf("[null]");
@@ -62,7 +62,7 @@ static void printf_lann(void) {
   ln_uint_t value = ln_get_arg(index++);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return;
   
-  const char *format = ln_bump + LN_VALUE_TO_PTR(value);
+  const char *format = ln_data + LN_VALUE_TO_PTR(value);
   
   while (*format) {
     if (*format == '[') {
@@ -84,7 +84,7 @@ static void put_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return;
   
-  printf("%s", ln_bump + LN_VALUE_TO_PTR(value));
+  printf("%s", ln_data + LN_VALUE_TO_PTR(value));
   fflush(stdout);
 }
 
@@ -100,11 +100,11 @@ static ln_uint_t get_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
-  fgets(ln_bump + LN_VALUE_TO_PTR(value), LN_BUMP_SIZE, stdin);
-  size_t length = strlen(ln_bump + LN_VALUE_TO_PTR(value));
+  fgets(ln_data + LN_VALUE_TO_PTR(value), LN_BUMP_SIZE, stdin);
+  size_t length = strlen(ln_data + LN_VALUE_TO_PTR(value));
   
-  while (ln_bump[LN_VALUE_TO_PTR(value) + (length - 1)] == '\n') {
-    ln_bump[LN_VALUE_TO_PTR(value) + (length - 1)] = '\0';
+  while (ln_data[LN_VALUE_TO_PTR(value) + (length - 1)] == '\n') {
+    ln_data[LN_VALUE_TO_PTR(value) + (length - 1)] = '\0';
     length--;
   }
   
@@ -151,8 +151,8 @@ static ln_uint_t get_term_lann(void) {
     return LN_INT_TO_VALUE(0);
   }
   
-  *((ln_uint_t *)(ln_bump + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(ws.ws_col);
-  *((ln_uint_t *)(ln_bump + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(ws.ws_row);
+  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(ws.ws_col);
+  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(ws.ws_row);
   
   return LN_INT_TO_VALUE(1);
 }
@@ -164,13 +164,19 @@ static void stats_lann(void) {
     (100 * ln_bump_offset + LN_BUMP_SIZE / 2) / LN_BUMP_SIZE
   );
   
+  printf("heap: %u/%u bytes used (%d%%)\n",
+    ln_heap_used,
+    LN_HEAP_SIZE,
+    (100 * ln_heap_used + LN_HEAP_SIZE / 2) / LN_HEAP_SIZE
+  );
+  
   printf("vars: %u/%u bytes used (%d%%)\n",
     ln_context_offset * sizeof(ln_entry_t),
     LN_CONTEXT_SIZE * sizeof(ln_entry_t),
     (100 * ln_context_offset + LN_CONTEXT_SIZE / 2) / LN_CONTEXT_SIZE
   );
   
-  printf("word: %u/%u bytes saved (%d%%)\n",
+  printf("word: %u/%u words skipped (%d%%)\n",
     ln_words_saved,
     ln_words_total,
     (100 * ln_words_saved + ln_words_total / 2) / ln_words_total
@@ -229,7 +235,7 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
       return 1;
     }
     
-    const char *path = ln_bump + LN_VALUE_TO_PTR(ln_get_arg(0));
+    const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
     FILE *file = fopen(path, "r");
     
     if (!file) {
@@ -250,7 +256,7 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
       return 1;
     }
     
-    const char *path = ln_bump + LN_VALUE_TO_PTR(ln_get_arg(0));
+    const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
     FILE *file = fopen(path, "r");
     
     if (!file) {
@@ -262,7 +268,7 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
     size_t size = ftell(file);
     
     rewind(file);
-    size_t total = fread(ln_bump + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
+    size_t total = fread(ln_data + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
     
     *value = LN_INT_TO_VALUE(total);
     return 1;
@@ -272,7 +278,7 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
       return 1;
     }
     
-    const char *path = ln_bump + LN_VALUE_TO_PTR(ln_get_arg(0));
+    const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
     FILE *file = fopen(path, "w");
     
     if (!file) {
@@ -281,7 +287,7 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
     }
     
     size_t size = (size_t)(LN_VALUE_TO_INT(ln_get_arg(2)));
-    size_t total = fwrite(ln_bump + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
+    size_t total = fwrite(ln_data + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
     
     *value = LN_INT_TO_VALUE(total);
     return 1;
@@ -291,7 +297,7 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
       return 1;
     }
     
-    remove(ln_bump + LN_VALUE_TO_PTR(ln_get_arg(0)));
+    remove(ln_data + LN_VALUE_TO_PTR(ln_get_arg(0)));
     return 1;
   }
   
