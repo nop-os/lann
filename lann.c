@@ -142,8 +142,6 @@ ln_uint_t ln_heap_alloc(ln_uint_t size) {
   if (!ln_heap_inited) ln_heap_init();
   ln_heap_t *block = (ln_heap_t *)(ln_heap);
   
-  printf("allocating block of %llu bytes...\n", size);
-  
   while ((uint8_t *)(block) < ln_heap + LN_HEAP_SIZE) {
     if (block->free) {
       if (block->size == size) {
@@ -484,6 +482,8 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_func_mem_write};
   } else if (ln_case_equal(token, "mem_copy")) {
     return (ln_word_t){.type = ln_word_func_mem_copy};
+  } else if (ln_case_equal(token, "mem_move")) {
+    return (ln_word_t){.type = ln_word_func_mem_move};
   } else if (ln_case_equal(token, "mem_test")) {
     return (ln_word_t){.type = ln_word_func_mem_test};
   } else if (ln_case_equal(token, "mem_alloc")) {
@@ -1046,6 +1046,34 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     if (exec) memcpy(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2), LN_VALUE_TO_INT(count));
+    
+    ln_context_offset = context_offset;
+    ln_bump_offset = bump_offset;
+    
+    return count;
+  } else if (ln_expect(NULL, ln_word_func_mem_move)) {
+    ln_uint_t context_offset = ln_context_offset;
+    ln_uint_t bump_offset = ln_bump_offset;
+    
+    ln_expect(NULL, ln_word_paren_left);
+    
+    ln_uint_t ptr_1 = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_comma);
+    
+    ln_uint_t ptr_2 = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_comma);
+    
+    ln_uint_t count = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_paren_right);
+    
+    if (LN_VALUE_TYPE(ptr_1) != ln_type_pointer || LN_VALUE_TYPE(ptr_2) != ln_type_pointer || LN_VALUE_TYPE(count) != ln_type_number) {
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_INVALID_TYPE;
+    }
+    
+    if (exec) memmove(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2), LN_VALUE_TO_INT(count));
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;

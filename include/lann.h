@@ -10,6 +10,7 @@
 // mem_read(ptr)
 // mem_write(ptr, byte)
 // mem_copy(ptr_1, ptr_2, count)
+// mem_move(ptr_1, ptr_2, count)
 // mem_test(ptr_1, ptr_2, count)
 // mem_alloc(size)
 // mem_realloc(ptr, size)
@@ -127,6 +128,7 @@ enum {
   ln_word_func_mem_read,
   ln_word_func_mem_write,
   ln_word_func_mem_copy,
+  ln_word_func_mem_move,
   ln_word_func_mem_test,
   ln_word_func_mem_alloc,
   ln_word_func_mem_realloc,
