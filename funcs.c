@@ -80,6 +80,14 @@ static void printf_lann(void) {
   fflush(stdout);
 }
 
+static void put_text_lann(void) {
+  ln_uint_t value = ln_get_arg(0);
+  if (LN_VALUE_TYPE(value) != ln_type_pointer) return;
+  
+  printf("%s", ln_bump + LN_VALUE_TO_PTR(value));
+  fflush(stdout);
+}
+
 static void put_char_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_number) return;
@@ -88,7 +96,7 @@ static void put_char_lann(void) {
   fflush(stdout);
 }
 
-static ln_uint_t get_line_lann(void) {
+static ln_uint_t get_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
@@ -169,13 +177,18 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
     
     *value = LN_NULL;
     return 1;
+  } else if (hash == ln_hash("put_text")) {
+    put_text_lann();
+    
+    *value = LN_NULL;
+    return 1;
   } else if (hash == ln_hash("put_char")) {
     put_char_lann();
     
     *value = LN_NULL;
     return 1;
-  } else if (hash == ln_hash("get_line")) {
-    *value = get_line_lann();
+  } else if (hash == ln_hash("get_text")) {
+    *value = get_text_lann();
     return 1;
   } else if (hash == ln_hash("get_char")) {
     *value = get_char_lann();

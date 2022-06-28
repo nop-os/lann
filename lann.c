@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 #include <lann.h>
 
 uint8_t ln_bump[LN_BUMP_SIZE];
@@ -488,7 +489,10 @@ ln_uint_t ln_eval_0(int exec) {
   if (ln_expect(&word, ln_word_number)) {
     return word.data;
   } else if (ln_expect(&word, ln_word_string)) {
-    return LN_PTR_TO_VALUE(word.data);
+    if (exec) return LN_PTR_TO_VALUE(word.data);
+    
+    ln_bump_offset = word.data;
+    return LN_NULL;
   } else if (ln_expect(&word, ln_word_name)) {
     if (ln_expect(NULL, ln_word_paren_left)) {
       ln_uint_t context_offset = ln_context_offset;
@@ -498,11 +502,12 @@ ln_uint_t ln_eval_0(int exec) {
       int count = 0;
       
       while (!ln_expect(NULL, ln_word_paren_right)) {
-        ln_uint_t value = ln_eval_expr(0);
+        ln_eval_expr(0);
         ln_expect(NULL, ln_word_comma);
         
         count++;
       }
+      
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
       
@@ -1087,11 +1092,11 @@ ln_uint_t ln_eval_0(int exec) {
       count++;
     }
     
-    if (!exec) return LN_NULL;
-    
     ln_context_offset = context_offset;
-    ln_code_offset = code_offset;
     ln_bump_offset = bump_offset;
+    
+    if (!exec) return LN_NULL;
+    ln_code_offset = code_offset;
     
     ln_uint_t args[count];
     count = 0;
@@ -1156,7 +1161,6 @@ ln_uint_t ln_eval_0(int exec) {
     memmove(ln_bump + bump_offset, ln_bump + offset, ln_bump_offset - offset);
     ln_bump_offset = bump_offset + (ln_bump_offset - offset);
     
-    ln_expect(NULL, ln_word_paren_right);
     return LN_PTR_TO_VALUE(bump_offset);
   }
   

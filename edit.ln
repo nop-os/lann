@@ -1,0 +1,18 @@
+raw_mode(true)
+
+func goto_xy: begin
+  put_text(str_format("\x1B[[[];[]H", get(args, 1) + 1, get(args, 0) + 1))
+end
+
+put_text("\x1B[2J")
+
+goto_xy(0, 0)
+put_text("hello uwu")
+
+while true: begin
+  let chr: get_char()
+  if chr = 113: break
+end
+
+raw_mode(false);
+give 0
