@@ -31,7 +31,7 @@ static void print_fixed(ln_uint_t fixed, int first) {
   }
 }
 
-static void print_value(ln_uint_t value, int result) {
+void print_value(ln_uint_t value, int result) {
   int type = LN_VALUE_TYPE(value);
   
   if (type == ln_type_number) {
@@ -151,8 +151,8 @@ static ln_uint_t get_term_lann(void) {
     return LN_INT_TO_VALUE(0);
   }
   
-  *((ln_uint_t *)(ln_bump + LN_VALUE_TO_PTR(ptr_1))) = ws.ws_col;
-  *((ln_uint_t *)(ln_bump + LN_VALUE_TO_PTR(ptr_2))) = ws.ws_row;
+  *((ln_uint_t *)(ln_bump + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(ws.ws_col);
+  *((ln_uint_t *)(ln_bump + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(ws.ws_row);
   
   return LN_INT_TO_VALUE(1);
 }
@@ -168,6 +168,12 @@ static void stats_lann(void) {
     ln_context_offset * sizeof(ln_entry_t),
     LN_CONTEXT_SIZE * sizeof(ln_entry_t),
     (100 * ln_context_offset + LN_CONTEXT_SIZE / 2) / LN_CONTEXT_SIZE
+  );
+  
+  printf("word: %u/%u bytes saved (%d%%)\n",
+    ln_words_saved,
+    ln_words_total,
+    (100 * ln_words_saved + ln_words_total / 2) / ln_words_total
   );
 }
 

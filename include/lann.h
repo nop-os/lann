@@ -60,7 +60,7 @@
 #define LN_VALUE_NEGATE(x) (LN_FIXED_TO_VALUE(-LN_VALUE_TO_FIXED((x))))
 
 #define LN_FIXED_TO_VALUE(x) (((ln_uint_t)((x)) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1)) | (LN_FIXED_SIGN((x)) << (8 * sizeof(x) - 2)))
-#define LN_INT_TO_VALUE(x)   (LN_FIXED_TO_VALUE((ln_int_t)((x)) * (1 << LN_FIXED_DOT)))
+#define LN_INT_TO_VALUE(x)   (LN_FIXED_TO_VALUE((ln_int_t)((x)) << LN_FIXED_DOT))
 
 #define LN_VALUE_TO_PTR(x) ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
 #define LN_PTR_TO_VALUE(x) ((x) | ((ln_uint_t)(1) << (8 * sizeof(x) - 1)))
@@ -173,8 +173,13 @@ extern ln_uint_t ln_context_offset;
 extern const char *ln_code;
 extern ln_uint_t ln_code_offset;
 
+extern ln_word_t ln_last;
+extern ln_uint_t ln_last_curr, ln_last_next;
+
 extern int ln_back, ln_break;
 extern ln_uint_t ln_return;
+
+extern ln_uint_t ln_words_total, ln_words_saved;
 
 extern const int ln_type_match[];
 

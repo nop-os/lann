@@ -1,17 +1,102 @@
-raw_mode(true)
+let ansi_invert: "\x1B[7m"
+let ansi_normal: "\x1B[27m"
+
+let term_width: 80
+let term_height: 25
+
+let path: "repl.ln"
+
+let cursor: 0
 
 func goto_xy: begin
   put_text(str_format("\x1B[[[];[]H", get(args, 1) + 1, get(args, 0) + 1))
 end
 
+func draw_ui: block begin
+  goto_xy(0, 0)
+  put_text(ansi_invert)
+  
+  let count: 0
+  
+  while count < term_width: begin
+    put_char(32)
+    let count: count + 1
+  end
+  
+  goto_xy(1, 0)
+  printf("edit r01 - []", path)
+  
+  goto_xy(0, term_height - 1)
+  
+  printf("[]^Q[] quit ", ansi_invert, ansi_normal)
+  printf("[]^S[] save ", ansi_invert, ansi_normal)
+  printf("[]^O[] open ", ansi_invert, ansi_normal)
+  printf("[]^N[] new ", ansi_invert, ansi_normal)
+  printf("[]^C[] copy ", ansi_invert, ansi_normal)
+  printf("[]^X[] cut ", ansi_invert, ansi_normal)
+  printf("[]^P[] paste ", ansi_invert, ansi_normal)
+  printf("[]^F[] find ", ansi_invert, ansi_normal)
+  printf("[]^G[] replace ", ansi_invert, ansi_normal)
+  
+  put_text(ansi_normal)
+  goto_xy(0, 1)
+  
+  let text: get(args, 0)
+  let index: 0
+  
+  let pos_x: 0
+  let pos_y: 0
+  
+  let cursor_x: 0
+  let cursor_y: 0
+  
+  while (let chr: mem_read(text + index)): begin
+    if index = cursor: begin
+      let cursor_x: pos_x
+      let cursor_y: pos_y
+    end
+    
+    if chr = 10: begin
+      let pos_x: 0
+      let pos_y: pos_y + 1
+      
+      put_text("\r\n")
+    end else: begin
+      let pos_x: pos_x + 1
+      
+      put_char(chr)
+    end
+    
+    let index: index + 1
+  end
+  
+  goto_xy(cursor_x, cursor_y + 1)
+end
+
+# func edit_open: block begin
+  let size: file_size(path)
+  array text: size + 100
+  
+  file_load(path, text)
+  set(text, size, 0)
+# end
+
+raw_mode(true)
+
+# get_term(ref term_width, ref term_height)
+
 put_text("\x1B[2J")
 
-goto_xy(0, 0)
-put_text("hello uwu")
+draw_ui(text)
 
 while true: begin
   let chr: get_char()
-  if chr = 113: break
+  
+  if chr = 113: begin
+    break
+  end else if chr: begin
+    draw_ui(text)
+  end
 end
 
 raw_mode(false);
