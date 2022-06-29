@@ -1,11 +1,14 @@
 let ansi_invert: "\x1B[7m"
 let ansi_normal: "\x1B[27m"
 let ansi_clear: "\x1B[2J"
+let ansi_fill: "\x1B[0K"
 
 let term_width: 80
 let term_height: 25
 
 array path: 256
+
+let scroll: 0
 let cursor: 0
 
 let text: null
@@ -46,13 +49,13 @@ func draw_ui: block begin
   goto_xy(0, 1)
   
   let text: get(args, 0)
-  let index: 0
+  let index: scroll
   
   let pos_x: 0
   let pos_y: 0
   
-  let cursor_x: 0
-  let cursor_y: 0
+  let cursor_x: -1
+  let cursor_y: -1
   
   while (let chr: mem_read(text + index)): begin
     if index = cursor: begin
@@ -64,6 +67,9 @@ func draw_ui: block begin
       let pos_x: 0
       let pos_y: pos_y + 1
       
+      put_text(ansi_fill)
+      
+      if pos_y >= term_height - 2: break
       put_text("\r\n")
     end else: begin
       let pos_x: pos_x + 1
@@ -74,6 +80,16 @@ func draw_ui: block begin
     let index: index + 1
   end
   
+  # TODO: make this bit faaaaaaster with some algorithm or something, idfk
+  if cursor_x = -1 and cursor_y = -1: begin
+    if cursor < scroll: let scroll: scroll - 1
+    else: let scroll: scroll + 1
+    
+    draw_ui(text)
+    give null
+  end
+  
+  put_text(ansi_fill)
   goto_xy(cursor_x, cursor_y + 1)
 end
 
@@ -108,6 +124,15 @@ func edit_write: block begin
   let cursor: cursor + 1
 end
 
+func edit_back: block begin
+  if cursor <= 0: give null
+  
+  mem_move(text + (cursor - 1), text + cursor, (text_size + 1) - cursor)
+  
+  let text_size: text_size - 1
+  let cursor: cursor - 1
+end
+
 raw_mode(true)
 edit_open("repl.ln")
 
@@ -119,8 +144,14 @@ draw_ui(text)
 while true: begin
   let chr: get_char()
   
-  if chr = 113: begin
+  if chr = 17: begin
     break
+  end else if chr = 8 or chr = 127: begin
+    edit_back()
+    draw_ui(text)
+  end else if chr = 13: begin
+    edit_write(10)
+    draw_ui(text)
   end else if chr: begin
     edit_write(chr)
     draw_ui(text)
