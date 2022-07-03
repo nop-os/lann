@@ -1,3 +1,5 @@
+# TODO: store cursor x and y, but continue using text offset as main position measure
+
 let ansi_invert: "\x1B[7m"
 let ansi_normal: "\x1B[27m"
 let ansi_clear: "\x1B[2J"
@@ -11,13 +13,15 @@ array path: 256
 let scroll: 0
 let cursor: 0
 
+let cursor_x: -1
+let cursor_y: -1
+
 let text: null
 let text_size: 0
 let text_total: 0
 
-func goto_xy: begin
+func goto_xy:
   put_text(str_format("\x1B[[[];[]H", get(args, 1) + 1, get(args, 0) + 1))
-end
 
 func draw_ui: block begin
   goto_xy(0, 0)
@@ -48,16 +52,14 @@ func draw_ui: block begin
   put_text(ansi_normal)
   goto_xy(0, 1)
   
-  let text: get(args, 0)
-  let index: scroll
+  let index: 0
   
   let pos_x: 0
   let pos_y: 0
   
-  let cursor_x: -1
-  let cursor_y: -1
-  
-  while (let chr: mem_read(text + index)): begin
+  while mem_read(text + index): begin
+    let chr: mem_read(text + index)
+    
     if index = cursor: begin
       let cursor_x: pos_x
       let cursor_y: pos_y
@@ -73,34 +75,29 @@ func draw_ui: block begin
       put_text("\r\n")
     end else: begin
       let pos_x: pos_x + 1
-      
       put_char(chr)
     end
     
     let index: index + 1
   end
   
-  # TODO: make this bit faaaaaaster with some algorithm or something, idfk
-  if cursor_x = -1 and cursor_y = -1: begin
-    if cursor < scroll: let scroll: scroll - 1
-    else: let scroll: scroll + 1
-    
-    draw_ui(text)
-    give null
+  if index = cursor: begin
+    let cursor_x: pos_x
+    let cursor_y: pos_y
   end
   
   put_text(ansi_fill)
   goto_xy(cursor_x, cursor_y + 1)
 end
 
-func edit_open: block begin
-  if get(args, 0) != null: begin
+func edit_ctrl: get(args, 0) & 0x1F
+
+func edit_open: begin
+  if get(args, 0) != null:
     str_copy(path, get(args, 0))
-  end
   
-  if text != null: begin
+  if text != null:
     mem_free(text)
-  end
   
   let text_size: file_size(path)
   let text_total: text_size + 1
@@ -111,7 +108,7 @@ func edit_open: block begin
   mem_write(text + text_size, 0)
 end
 
-func edit_write: block begin
+func edit_write: begin
   if text_total < text_size + 2: begin
     let text_total: text_total + 16
     let text: mem_realloc(text, text_total)
@@ -124,7 +121,7 @@ func edit_write: block begin
   let cursor: cursor + 1
 end
 
-func edit_back: block begin
+func edit_back: begin
   if cursor <= 0: give null
   
   mem_move(text + (cursor - 1), text + cursor, (text_size + 1) - cursor)
@@ -133,29 +130,85 @@ func edit_back: block begin
   let cursor: cursor - 1
 end
 
+func edit_left: begin
+  if cursor <= 0: give null
+  let cursor: cursor - 1
+end
+
+func edit_right: begin
+  if cursor >= text_size: give null
+  let cursor: cursor + 1
+end
+
+func edit_up: block begin
+  while cursor > 0 and mem_read(text + cursor) != '\n': begin
+    let cursor: cursor - 1
+  end
+  
+  if mem_read(text + cursor) = '\n': let cursor: cursor - 1
+  else: give null
+  
+  while cursor > 0 and mem_read(text + cursor) != '\n': begin
+    let cursor: cursor - 1
+  end
+  
+  let count: 0
+  
+  while count < cursor_x: begin
+    let cursor: cursor + 1
+    let count: count + 1
+    
+    if mem_read(text + cursor) = '\n': break
+  end
+end
+
+func edit_down: block begin
+  while cursor < text_size and mem_read(text + cursor) != '\n': begin
+    let cursor: cursor + 1
+  end
+  
+  if mem_read(text + cursor) = '\n': let cursor: cursor + 1
+  else: give null
+  
+  let count: 0
+  
+  while count < cursor_x: begin
+    let cursor: cursor + 1
+    let count: count + 1
+    
+    let chr: mem_read(text + cursor)
+    if !chr or chr = '\n': break
+  end
+end
+
 raw_mode(true)
 edit_open("repl.ln")
 
-# get_term(ref term_width, ref term_height)
+get_term(ref term_width, ref term_height)
 
 put_text(ansi_clear)
-draw_ui(text)
+draw_ui()
 
 while true: begin
   let chr: get_char()
   
-  if chr = 17: begin
-    break
-  end else if chr = 8 or chr = 127: begin
-    edit_back()
-    draw_ui(text)
-  end else if chr = 13: begin
-    edit_write(10)
-    draw_ui(text)
-  end else if chr: begin
-    edit_write(chr)
-    draw_ui(text)
+  if chr = edit_ctrl('q'): break
+  
+  else if chr = '\x1B': begin 
+    get_char() # skip '['
+    let chr: get_char()
+    
+    if chr = 'A': edit_up()
+    else if chr = 'B': edit_down()
+    else if chr = 'C': edit_right()
+    else if chr = 'D': edit_left()
   end
+  
+  else if chr = '\x08' or chr = '\x7F': edit_back()
+  else if chr = '\r' or chr = '\n': edit_write(10)
+  else if chr: edit_write(chr)
+  
+  if chr: draw_ui()
 end
 
 raw_mode(false)

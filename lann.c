@@ -285,16 +285,21 @@ static int ln_space(char chr) {
 
 char ln_keep(int in_string) {
   if (!in_string) {
-    if (ln_code[ln_code_offset] == '#') {
-      while (ln_code[ln_code_offset] && ln_code[ln_code_offset] != '\n') ln_code_offset++;
+    int is_delim = 0;
+    
+    for (;;) {
+      if (ln_code[ln_code_offset] == '#') {
+        while (ln_code[ln_code_offset] && ln_code[ln_code_offset] != '\n') ln_code_offset++;
+        is_delim = 1;
+      } else if (ln_space(ln_code[ln_code_offset])) {
+        ln_code_offset++;
+        is_delim = 1;
+      } else {
+        break;
+      }
     }
     
-    if (ln_space(ln_code[ln_code_offset])) {
-      while (ln_code[ln_code_offset + 1] && ln_space(ln_code[ln_code_offset + 1])) ln_code_offset++;
-      ln_code_offset++;
-      
-      return LN_CHAR_DELIM;
-    }
+    if (is_delim) return LN_CHAR_DELIM;
   }
   
   if (!ln_code[ln_code_offset]) return LN_CHAR_EOF;
@@ -315,6 +320,7 @@ char ln_read(int in_string) {
 ln_word_t ln_take(void) {
   ln_words_total++;
   
+  /*
   if (ln_last_curr < ln_last_next && ln_last_curr == ln_code_offset) {
     ln_last_curr = ln_last_next;
     
@@ -325,11 +331,13 @@ ln_word_t ln_take(void) {
       return ln_last;
     }
   }
+  */
   
   ln_uint_t offset = ln_bump_offset;
   char *token = ln_data + offset;
   
   int in_string = 0;
+  char string_chr = '\0';
   
   for (;;) {
     char chr = ln_read(in_string);
@@ -394,11 +402,13 @@ ln_word_t ln_take(void) {
       continue;
     }
     
-    if (chr == '"') {
+    if (chr == '"' || chr == '\'') {
       if (in_string) {
-        break;
+        if (chr == string_chr) break;
       } else {
+        string_chr = chr;
         in_string = 1;
+        
         continue;
       }
     }
@@ -421,7 +431,7 @@ ln_word_t ln_take(void) {
   ln_last_curr = ln_code_offset;
   ln_last_next = ln_code_offset;
   
-  if (in_string) {
+  if (in_string && string_chr == '"') {
     return (ln_word_t){.type = ln_word_string, .data = offset};
   }
   
@@ -541,6 +551,8 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_bool_xor};
   } else if (ln_digit(token[0])) {
     return (ln_word_t){.type = ln_word_number, .data = ln_fixed(token)};
+  } else if (in_string && string_chr == '\'') {
+    return (ln_word_t){.type = ln_word_number, .data = ((ln_uint_t)(token[0]) << LN_FIXED_DOT)};
   } else {
     return (ln_word_t){.type = ln_word_name, .data = ln_hash(ln_data + offset)};
   }
@@ -835,6 +847,13 @@ ln_uint_t ln_eval_0(int exec) {
   } else if (ln_expect(NULL, ln_word_while)) {
     ln_uint_t code_offset = ln_code_offset;
     ln_uint_t value = LN_NULL;
+    
+    if (!exec) {
+      ln_eval_expr(0);
+      ln_eval_expr(0);
+      
+      return LN_NULL;
+    }
     
     for (;;) {
       ln_uint_t context_offset = ln_context_offset;
