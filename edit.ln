@@ -278,7 +278,36 @@ func edit_back: block begin
 end
 
 func edit_enter: block begin
+  let lines: mem_realloc(lines, (line_count + 1) * size_of(pointer))
   
+  let prev_line: get(lines, cursor_y)
+  let prev_size: str_size(prev_line)
+  
+  #     | 4
+  # aaaabbb.
+  # 
+  
+  let curr_line: mem_alloc((prev_size - cursor_x) + 1)
+  str_copy(curr_line, prev_line + cursor_x)
+  
+  let prev_line: mem_realloc(prev_line, cursor_x + 1)
+  mem_write(prev_line + cursor_x, 0)
+  
+  mem_move(
+    lines + (cursor_y + 2) * size_of(pointer),
+    lines + (cursor_y + 1) * size_of(pointer),
+    ((line_count - 1) - cursor_y) * size_of(pointer)
+  )
+  
+  set(lines, cursor_y, prev_line)
+  set(lines, cursor_y + 1, curr_line)
+  
+  let line_count: line_count + 1
+  
+  let cursor_x: 0
+  let cursor_y: cursor_y + 1
+  
+  let update_mode: 3
 end
 
 if get(args, 0) = null: edit_new()
