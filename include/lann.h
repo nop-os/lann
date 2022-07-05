@@ -38,11 +38,11 @@
 #endif
 
 #ifndef LN_BUMP_SIZE
-#define LN_BUMP_SIZE 65536
+#define LN_BUMP_SIZE 16384
 #endif
 
 #ifndef LN_HEAP_SIZE
-#define LN_HEAP_SIZE 131072
+#define LN_HEAP_SIZE 16384
 #endif
 
 #ifndef LN_CONTEXT_SIZE

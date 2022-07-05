@@ -74,6 +74,10 @@ end
 func edit_ctrl: get(args, 0) & 0x1F
 
 func edit_new: block begin
+  if lines != null and line_count > 0: begin
+    edit_close()
+  end
+  
   let lines: mem_alloc(1 * size_of(pointer))
   let line_count: 1
   
@@ -120,6 +124,22 @@ func edit_open: block begin
     
     let index: index + 1
   end
+  
+  mem_free(text)
+end
+
+func edit_close: block begin
+  let index: 0
+  
+  while index < line_count: begin
+    mem_free(get(lines, index))
+    let index: index + 1
+  end
+  
+  mem_free(lines)
+  
+  let lines: null
+  let line_count: 0
 end
 
 func edit_up: begin
@@ -182,6 +202,14 @@ func edit_write: block begin
   set(lines, cursor_y, new_line)
 end
 
+func edit_back: block begin
+  
+end
+
+func edit_enter: block begin
+  
+end
+
 raw_mode(true)
 edit_open("repl.ln")
 
@@ -194,6 +222,7 @@ while true: block begin
   let chr: get_char()
   
   if chr = edit_ctrl('q'): break
+  else if chr = edit_ctrl('n'): edit_new()
   
   else if chr = '\x1B': begin 
     get_char() # skip '['
@@ -205,8 +234,8 @@ while true: block begin
     else if chr = 'D': edit_left()
   end
   
-  # else if chr = '\x08' or chr = '\x7F': edit_back()
-  # else if chr = '\r' or chr = '\n': edit_write(10)
+  else if chr = '\x08' or chr = '\x7F': edit_back()
+  else if chr = '\r' or chr = '\n': edit_enter()
   else if chr: edit_write(chr)
   
   if chr: draw_ui()

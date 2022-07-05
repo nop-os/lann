@@ -148,7 +148,7 @@ ln_uint_t ln_heap_alloc(ln_uint_t size) {
         block->free = 0;
         
         ln_heap_used += size;
-        return LN_PTR_TO_VALUE(((uint8_t *)(block) - ln_data) + sizeof(ln_heap_t));
+        return LN_PTR_TO_VALUE((ln_uint_t)(((uint8_t *)(block) - ln_data) + sizeof(ln_heap_t)));
       } else if (block->size >= size + sizeof(ln_heap_t)) {
         ln_heap_t *new_block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + size);
         ln_uint_t old_size = block->size;
@@ -160,7 +160,7 @@ ln_uint_t ln_heap_alloc(ln_uint_t size) {
         new_block->free = 1;
         
         ln_heap_used += size + sizeof(ln_heap_t);
-        return LN_PTR_TO_VALUE(((uint8_t *)(block) - ln_data) + sizeof(ln_heap_t));
+        return LN_PTR_TO_VALUE((ln_uint_t)(((uint8_t *)(block) - ln_data) + sizeof(ln_heap_t)));
       }
     }
     

@@ -1,10 +1,15 @@
+#ifdef __NOP__
+#include <nop/term.h>
+#else
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <termios.h>
+#include <unistd.h>
+#endif
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <lann.h>
 
@@ -77,7 +82,9 @@ static void printf_lann(void) {
     format++;
   }
   
+  #ifndef __NOP__
   fflush(stdout);
+  #endif
 }
 
 static void put_text_lann(void) {
@@ -85,7 +92,10 @@ static void put_text_lann(void) {
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return;
   
   printf("%s", ln_data + LN_VALUE_TO_PTR(value));
+  
+  #ifndef __NOP__
   fflush(stdout);
+  #endif
 }
 
 static void put_char_lann(void) {
@@ -93,14 +103,22 @@ static void put_char_lann(void) {
   if (LN_VALUE_TYPE(value) != ln_type_number) return;
   
   putchar(LN_VALUE_TO_INT(value));
+  
+  #ifndef __NOP__
   fflush(stdout);
+  #endif
 }
 
 static ln_uint_t get_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
+  #ifdef __NOP__
+  gets_s(ln_data + LN_VALUE_TO_PTR(value), LN_BUMP_SIZE);
+  #else
   fgets(ln_data + LN_VALUE_TO_PTR(value), LN_BUMP_SIZE, stdin);
+  #endif
+  
   size_t length = strlen(ln_data + LN_VALUE_TO_PTR(value));
   
   while (ln_data[LN_VALUE_TO_PTR(value) + (length - 1)] == '\n') {
@@ -113,7 +131,12 @@ static ln_uint_t get_text_lann(void) {
 
 static ln_uint_t get_char_lann(void) {
   char chr;
+  
+  #ifdef __NOP__
+  if (!term_read(&chr, 1)) chr = '\0';
+  #else
   if (read(STDIN_FILENO, &chr, 1) <= 0) chr = '\0';
+  #endif
   
   return LN_INT_TO_VALUE(chr);
 }
@@ -122,6 +145,16 @@ static void raw_mode_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_number) return;
   
+  #ifdef __NOP__
+  static int old_mode;
+  
+  if (LN_VALUE_TO_FIXED(value) != 0) {
+    old_mode = term_getmode();
+    term_setmode(0);
+  } else {
+    term_setmode(old_mode);
+  }
+  #else
   static struct termios old_termios;
   
   if (LN_VALUE_TO_FIXED(value) != 0) {
@@ -139,12 +172,18 @@ static void raw_mode_lann(void) {
   } else {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_termios);
   }
+  #endif
 }
 
 static ln_uint_t get_term_lann(void) {
   ln_uint_t ptr_1 = ln_get_arg(0), ptr_2 = ln_get_arg(1);
   if (LN_VALUE_TYPE(ptr_1) != ln_type_pointer || LN_VALUE_TYPE(ptr_2) != ln_type_pointer) return LN_INVALID_TYPE;
   
+  #ifdef __NOP__
+  // TODO
+  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(80);
+  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(25);
+  #else
   struct winsize ws;
   
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
@@ -153,6 +192,7 @@ static ln_uint_t get_term_lann(void) {
   
   *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(ws.ws_col);
   *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(ws.ws_row);
+  #endif
   
   return LN_INT_TO_VALUE(1);
 }
