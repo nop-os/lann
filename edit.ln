@@ -7,6 +7,7 @@ let term_width: 80
 let term_height: 25
 
 array path: 256
+mem_write(path, 0)
 
 let cursor_x: 0
 let cursor_y: 0
@@ -15,6 +16,8 @@ let scroll_y: 0
 
 let lines: null
 let line_count: 0
+
+let dirty: false
 
 # 0=none, 1=cursor, 2=line, 3=all
 let update_mode: 3
@@ -55,6 +58,10 @@ func draw_ui: block begin
   
   goto_xy(1, 0)
   printf("edit r01 - []", path)
+  
+  if dirty: begin
+    put_text(" (dirty)")
+  end
   
   goto_xy(0, term_height - 1)
   
@@ -106,12 +113,10 @@ func edit_new: block begin
 end
 
 func edit_open: block begin
-  if get(args, 0) != null:
-    str_copy(path, get(args, 0))
+  let text_size: file_size(path)
+  if text_size = null: give false
   
   edit_new()
-  
-  let text_size: file_size(path)
   let text: mem_alloc(text_size)
   
   file_load(path, text)
@@ -144,9 +149,54 @@ func edit_open: block begin
   end
   
   mem_free(text)
+  give true
+end
+
+func edit_save: block begin
+  let text: mem_alloc(1)
+  let size: 0
+  
+  mem_write(text, 0)
+  let index: 0
+  
+  while index < line_count: begin
+    if index: begin
+      let text: mem_realloc(text, size + 2)
+      str_copy(text + size, "\n")
+      
+      let size: size + 1
+    end
+    
+    let line: get(lines, index)
+    let line_size: str_size(line)
+    
+    let text: mem_realloc(text, size + line_size + 1)
+    str_copy(text + size, line)
+    
+    let size: size + line_size
+    let index: index + 1
+  end
+  
+  let value: file_save(path, text, size)
+  mem_free(text)
+  
+  give !(value = null or value < size)
 end
 
 func edit_close: block begin
+  if dirty and mem_read(path): block begin
+    array answer: 16
+    mem_write(answer, 0)
+    
+    while mem_read(answer) != 'y' and mem_read(answer) != 'n': begin
+      edit_prompt("confirm", "save before exit? (y/n)")
+    end
+    
+    if mem_read(answer) = 'y': begin
+      edit_save()
+    end
+  end
+  
   let index: 0
   
   while index < line_count: begin
@@ -228,6 +278,11 @@ func edit_write: block begin
   set(lines, cursor_y, new_line)
   
   let update_mode: 2
+  
+  if !dirty: begin
+    let update_mode: 3
+    let dirty: true
+  end
 end
 
 func edit_back: block begin
@@ -275,6 +330,11 @@ func edit_back: block begin
     
     let update_mode: 2
   end
+  
+  if !dirty: begin
+    let update_mode: 3
+    let dirty: true
+  end
 end
 
 func edit_enter: block begin
@@ -282,10 +342,6 @@ func edit_enter: block begin
   
   let prev_line: get(lines, cursor_y)
   let prev_size: str_size(prev_line)
-  
-  #     | 4
-  # aaaabbb.
-  # 
   
   let curr_line: mem_alloc((prev_size - cursor_x) + 1)
   str_copy(curr_line, prev_line + cursor_x)
@@ -308,10 +364,34 @@ func edit_enter: block begin
   let cursor_y: cursor_y + 1
   
   let update_mode: 3
+  let dirty: true
 end
 
-if get(args, 0) = null: edit_new()
-else: edit_open(get(args, 0))
+func edit_prompt: block begin
+  raw_mode(false)
+  goto_xy(0, term_height - 1)
+  
+  printf("[](empty)[] cancel ", ansi_invert, ansi_normal)
+  printf("[]enter[] [] ", ansi_invert, ansi_normal, get(args, 1))
+  
+  put_text(ansi_fill)
+  goto_xy(0, 0)
+  
+  printf("[][]:[] ", ansi_invert, get(args, 2), ansi_normal)
+  put_text(ansi_fill)
+  
+  get_text(get(args, 0))
+  raw_mode(true)
+  
+  let update_mode: 3
+end
+
+if get(args, 0) = null: begin
+  edit_new()
+end else: begin
+  str_copy(path, get(args, 0))
+  edit_open()
+end
 
 raw_mode(true)
 
@@ -321,8 +401,57 @@ put_text(ansi_clear)
 while true: block begin
   let chr: get_char()
   
-  if chr = edit_ctrl('q'): break
-  else if chr = edit_ctrl('n'): edit_new()
+  if chr = edit_ctrl('q'): begin
+    break
+  end else if chr = edit_ctrl('o'): block begin
+    array new_path: 256
+    edit_prompt(new_path, "open file", "path")
+    
+    array old_path: 256
+    str_copy(old_path, path)
+    
+    if mem_read(new_path): begin
+      str_copy(path, new_path)
+      
+      if edit_open(): begin
+        let cursor_x: 0
+        let cursor_y: 0
+        
+        let scroll_y: 0
+      end else: begin
+        str_copy(path, old_path)
+      end
+    end
+    
+    let update_mode: 3
+  end else if chr = edit_ctrl('s'): block begin
+    if !mem_read(path): begin
+      array old_path: 256
+      str_copy(old_path, path)
+      
+      array new_path: 256
+      edit_prompt(new_path, "save file", "path")
+      
+      if mem_read(new_path): begin
+        str_copy(path, new_path)
+        
+        if edit_save(): begin
+          let dirty: false
+        end else: begin
+          str_copy(path, old_path)
+        end
+      end
+    end else: begin
+      if edit_save(): begin
+        let dirty: false
+      end
+    end
+    
+    let update_mode: 3
+  end else if chr = edit_ctrl('n'): begin
+    edit_new()
+    let update_mode: 3
+  end
   
   else if chr = '\x1B': begin 
     get_char() # skip '['
@@ -355,6 +484,7 @@ while true: block begin
   let update_mode: 0
 end
 
+edit_close()
 raw_mode(false)
 
 put_text(ansi_clear)
