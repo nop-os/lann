@@ -12,6 +12,11 @@ mem_write(path, 0)
 let cursor_x: 0
 let cursor_y: 0
 
+let clip_x: -1
+let clip_y: -1
+
+let clipping: false
+
 let scroll_y: 0
 
 let lines: null
@@ -57,7 +62,9 @@ func draw_ui: block begin
   end
   
   goto_xy(1, 0)
-  printf("edit r01 - []", path)
+  
+  if mem_read(path): printf("edit r01 - []", path)
+  else: printf("edit r01 - (no name)")
   
   if dirty: begin
     put_text(" (dirty)")
@@ -69,12 +76,10 @@ func draw_ui: block begin
   printf("[]^S[] save ", ansi_invert, ansi_normal)
   printf("[]^O[] open ", ansi_invert, ansi_normal)
   printf("[]^N[] new ", ansi_invert, ansi_normal)
-  printf("[]^C[] copy ", ansi_invert, ansi_normal)
-  printf("[]^X[] cut ", ansi_invert, ansi_normal)
-  printf("[]^P[] paste ", ansi_invert, ansi_normal)
+  printf("[]^C[] clip ", ansi_invert, ansi_normal)
+  printf("[]^V[] paste ", ansi_invert, ansi_normal)
   printf("[]^F[] find ", ansi_invert, ansi_normal)
   printf("[]^G[] replace ", ansi_invert, ansi_normal)
-  printf("[]^R[] run", ansi_invert, ansi_normal)
   
   put_text(ansi_normal)
   goto_xy(0, 1)
@@ -451,6 +456,8 @@ while true: block begin
   end else if chr = edit_ctrl('n'): begin
     edit_new()
     let update_mode: 3
+  end else if chr = edit_ctrl('c'): begin
+    
   end
   
   else if chr = '\x1B': begin 
