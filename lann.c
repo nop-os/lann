@@ -3,14 +3,13 @@
 #include <stdio.h>
 #include <lann.h>
 
-uint8_t ln_data[LN_BUMP_SIZE + LN_HEAP_SIZE];
+uint8_t *ln_data = NULL;
 ln_uint_t ln_bump_offset = 0, ln_bump_args = 0;
 
-uint8_t *ln_heap = ln_data + LN_BUMP_SIZE;
 ln_uint_t ln_heap_used = 0;
 int ln_heap_inited = 0;
 
-ln_entry_t ln_context[LN_CONTEXT_SIZE];
+ln_entry_t *ln_context = NULL;
 ln_uint_t ln_context_offset = 0;
 
 const char *ln_code = NULL;
@@ -126,7 +125,7 @@ ln_uint_t ln_fixed(const char *text) {
 void ln_heap_init(void) {
   ln_heap_inited = 1;
   
-  ln_heap_t *block = (ln_heap_t *)(ln_heap);
+  ln_heap_t *block = (ln_heap_t *)(ln_data + LN_BUMP_SIZE);
   
   block->size = LN_HEAP_SIZE - sizeof(ln_heap_t);
   block->free = 1;
@@ -135,14 +134,30 @@ void ln_heap_init(void) {
 }
 
 void ln_heap_defrag(void) {
-  // TODO: defragmentation
+  if (!ln_heap_inited) ln_heap_init();
+  ln_heap_t *block = (ln_heap_t *)(ln_data + LN_BUMP_SIZE);
+  
+  while ((uint8_t *)(block) < ln_data + LN_BUMP_SIZE + LN_HEAP_SIZE) {
+    ln_heap_t *next_block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + block->size);
+    
+    if (block->free) {
+      if (next_block->free) {
+        block->size += next_block->size + sizeof(ln_heap_t);
+        ln_heap_used -= sizeof(ln_heap_t);
+        
+        continue;
+      }
+    }
+    
+    block = next_block;
+  }
 }
 
 ln_uint_t ln_heap_alloc(ln_uint_t size) {
   if (!ln_heap_inited) ln_heap_init();
-  ln_heap_t *block = (ln_heap_t *)(ln_heap);
+  ln_heap_t *block = (ln_heap_t *)(ln_data + LN_BUMP_SIZE);
   
-  while ((uint8_t *)(block) < ln_heap + LN_HEAP_SIZE) {
+  while ((uint8_t *)(block) < ln_data + LN_BUMP_SIZE + LN_HEAP_SIZE) {
     if (block->free) {
       if (block->size == size) {
         block->free = 0;
@@ -1537,16 +1552,16 @@ ln_uint_t ln_eval_5(int exec) {
       left = ((left != right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect_2(ln_word_great, ln_word_equal)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((left >= right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((LN_VALUE_TO_FIXED(left) >= LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect_2(ln_word_less, ln_word_equal)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((left <= right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((LN_VALUE_TO_FIXED(left) <= LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect(NULL, ln_word_great)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((left > right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((LN_VALUE_TO_FIXED(left) > LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else if (ln_expect(NULL, ln_word_less)) {
       ln_uint_t right = ln_eval_4(exec);
-      left = ((left < right) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
+      left = ((LN_VALUE_TO_FIXED(left) < LN_VALUE_TO_FIXED(right)) ? LN_INT_TO_VALUE(1) : LN_INT_TO_VALUE(0));
     } else {
       break;
     }

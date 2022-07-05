@@ -38,15 +38,15 @@
 #endif
 
 #ifndef LN_BUMP_SIZE
-#define LN_BUMP_SIZE 16384
+#define LN_BUMP_SIZE 32768
 #endif
 
 #ifndef LN_HEAP_SIZE
-#define LN_HEAP_SIZE 16384
+#define LN_HEAP_SIZE 32768
 #endif
 
 #ifndef LN_CONTEXT_SIZE
-#define LN_CONTEXT_SIZE 256
+#define LN_CONTEXT_SIZE 1024
 #endif
 
 #define LN_CHAR_DELIM ' '
@@ -183,14 +183,13 @@ struct ln_heap_t {
   uint8_t data[];
 };
 
-extern uint8_t ln_data[LN_BUMP_SIZE + LN_HEAP_SIZE];
+extern uint8_t *ln_data;
 extern ln_uint_t ln_bump_offset, ln_bump_args;
 
-extern uint8_t *ln_heap;
 extern ln_uint_t ln_heap_used;
 extern int ln_heap_inited;
 
-extern ln_entry_t ln_context[LN_CONTEXT_SIZE];
+extern ln_entry_t *ln_context;
 extern ln_uint_t ln_context_offset;
 
 extern const char *ln_code;

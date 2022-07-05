@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#define putstr(str) printf("%s", str)
 #endif
 
 #include <stddef.h>
@@ -46,16 +47,16 @@ void print_value(ln_uint_t value, int result) {
     if (result) {
       printf("\"%s\"", ln_data + LN_VALUE_TO_PTR(value));
     } else {
-      printf("%s", ln_data + LN_VALUE_TO_PTR(value));
+      putstr(ln_data + LN_VALUE_TO_PTR(value));
     }
   } else if (value == LN_NULL) {
-    printf("[null]");
+    putstr("[null]");
   } else if (value == LN_UNDEFINED) {
-    printf("[undefined]");
+    putstr("[undefined]");
   } else if (value == LN_DIVIDE_BY_ZERO) {
-    printf("[divide by zero]");
+    putstr("[divide by zero]");
   } else if (value == LN_INVALID_TYPE) {
-    printf("[invalid type]");
+    putstr("[invalid type]");
   } else {
     printf("[error %u]", LN_VALUE_TO_ERR(value));
   }
@@ -91,7 +92,7 @@ static void put_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return;
   
-  printf("%s", ln_data + LN_VALUE_TO_PTR(value));
+  putstr(ln_data + LN_VALUE_TO_PTR(value));
   
   #ifndef __NOP__
   fflush(stdout);

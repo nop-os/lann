@@ -5,11 +5,30 @@
 #include <lann.h>
 
 int main(int argc, const char **argv) {
-  const char *path = "repl.ln";
+  ln_data = malloc(LN_BUMP_SIZE + LN_HEAP_SIZE);
+  ln_context = malloc(LN_CONTEXT_SIZE * sizeof(ln_entry_t));
   
-  for (int i = 1; i < argc; i++) {
-    path = argv[i];
+  const char *path = "repl.ln";
+  if (argc >= 2) path = argv[1];
+  
+  int count = argc - 2;
+  if (count < 0) count = 0;
+  
+  ln_uint_t args[count];
+  count = 0;
+  
+  for (int i = 2; i < argc; i++) {
+    args[count++] = ln_bump_offset;
+    ln_bump_text(argv[i]);
   }
+  
+  ln_bump_args = ln_bump_offset;
+  
+  for (int i = 0; i < count; i++) {
+    ln_bump_value(LN_PTR_TO_VALUE(args[i]));
+  }
+  
+  ln_bump_value(LN_NULL);
   
   FILE *file = fopen(path, "r");
   if (!file) return 1;

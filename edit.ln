@@ -16,8 +16,31 @@ let scroll_y: 0
 let lines: null
 let line_count: 0
 
+# 0=none, 1=cursor, 2=line, 3=all
+let update_mode: 3
+
 func goto_xy:
   put_text(str_format("\x1B[[[];[]H", get(args, 1) + 1, get(args, 0) + 1))
+
+func draw_cursor: block begin
+  let temp_x: cursor_x
+  
+  if temp_x > str_size(get(lines, cursor_y)): begin
+    let temp_x: str_size(get(lines, cursor_y))
+  end
+  
+  goto_xy(temp_x, (cursor_y - scroll_y) + 1)
+end
+
+func draw_line: block begin
+  let screen_y: cursor_y - scroll_y
+  goto_xy(0, screen_y + 1)
+  
+  put_text(get(lines, cursor_y))
+  put_text(ansi_fill)
+  
+  goto_xy(cursor_x, (cursor_y - scroll_y) + 1)
+end
 
 func draw_ui: block begin
   goto_xy(0, 0)
@@ -44,6 +67,7 @@ func draw_ui: block begin
   printf("[]^P[] paste ", ansi_invert, ansi_normal)
   printf("[]^F[] find ", ansi_invert, ansi_normal)
   printf("[]^G[] replace ", ansi_invert, ansi_normal)
+  printf("[]^R[] run", ansi_invert, ansi_normal)
   
   put_text(ansi_normal)
   goto_xy(0, 1)
@@ -51,7 +75,7 @@ func draw_ui: block begin
   let screen_y: 0
   
   while screen_y < term_height - 2: begin
-    let index: screen_y - scroll_y
+    let index: screen_y + scroll_y
     
     if index >= 0 and index < line_count: put_text(get(lines, index))
     else: put_text("~")
@@ -62,13 +86,7 @@ func draw_ui: block begin
     let screen_y: screen_y + 1
   end
   
-  let temp_x: cursor_x
-  
-  if temp_x > str_size(get(lines, cursor_y)): begin
-    let temp_x: str_size(get(lines, cursor_y))
-  end
-  
-  goto_xy(temp_x, cursor_y + 1)
+  draw_cursor()
 end
 
 func edit_ctrl: get(args, 0) & 0x1F
@@ -148,6 +166,8 @@ func edit_up: begin
   end else: begin
     let cursor_y: cursor_y - 1
   end
+  
+  let update_mode: 1
 end
 
 func edit_down: begin
@@ -156,6 +176,8 @@ func edit_down: begin
   end else: begin
     let cursor_y: cursor_y + 1
   end
+  
+  let update_mode: 1
 end
 
 func edit_right: begin
@@ -168,6 +190,8 @@ func edit_right: begin
   end else: begin
     let cursor_x: cursor_x + 1
   end
+  
+  let update_mode: 1
 end
 
 func edit_left: begin
@@ -183,6 +207,8 @@ func edit_left: begin
   end else: begin
     let cursor_x: cursor_x - 1
   end
+  
+  let update_mode: 1
 end
 
 func edit_write: block begin
@@ -200,23 +226,68 @@ func edit_write: block begin
   
   let cursor_x: cursor_x + 1
   set(lines, cursor_y, new_line)
+  
+  let update_mode: 2
 end
 
 func edit_back: block begin
+  if cursor_x > str_size(get(lines, cursor_y)): begin
+    let cursor_x: str_size(get(lines, cursor_y))
+  end
   
+  if cursor_x <= 0: begin
+    if cursor_y <= 0: give null
+    
+    let prev_line: get(lines, cursor_y - 1)
+    let curr_line: get(lines, cursor_y)
+    
+    let prev_size: str_size(prev_line)
+    let curr_size: str_size(curr_line)
+    
+    let prev_line: mem_realloc(prev_line, prev_size + curr_size + 1)
+    str_copy(prev_line + prev_size, curr_line)
+    
+    mem_free(curr_line)
+    set(lines, cursor_y - 1, prev_line)
+    
+    mem_move(
+      lines + cursor_y * size_of(pointer),
+      lines + (cursor_y + 1) * size_of(pointer),
+      ((line_count - 1) - cursor_y) * size_of(pointer)
+    )
+    
+    let line_count: line_count - 1
+    let lines: mem_realloc(lines, line_count * size_of(pointer))
+    
+    let cursor_y: cursor_y - 1
+    let cursor_x: prev_size
+    
+    let update_mode: 3
+  end else: begin
+    let line: get(lines, cursor_y)
+    let size: str_size(line)
+    
+    mem_move(line + (cursor_x - 1), line + cursor_x, (size + 1) - cursor_x)
+    let line: mem_realloc(line, size)
+    
+    set(lines, cursor_y, line)
+    let cursor_x: cursor_x - 1
+    
+    let update_mode: 2
+  end
 end
 
 func edit_enter: block begin
   
 end
 
+if get(args, 0) = null: edit_new()
+else: edit_open(get(args, 0))
+
 raw_mode(true)
-edit_open("repl.ln")
 
 get_term(ref term_width, ref term_height)
-
 put_text(ansi_clear)
-draw_ui()
 
 while true: block begin
   let chr: get_char()
@@ -238,7 +309,21 @@ while true: block begin
   else if chr = '\r' or chr = '\n': edit_enter()
   else if chr: edit_write(chr)
   
-  if chr: draw_ui()
+  while cursor_y - scroll_y < 0: begin
+    let scroll_y: scroll_y - 1
+    let update_mode: 3
+  end 
+  
+  while cursor_y - scroll_y >= term_height - 2: begin
+    let scroll_y: scroll_y + 1
+    let update_mode: 3
+  end
+  
+  if update_mode = 1: draw_cursor()
+  else if update_mode = 2: draw_line()
+  else if update_mode = 3: draw_ui()
+  
+  let update_mode: 0
 end
 
 raw_mode(false)
