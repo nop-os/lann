@@ -38,11 +38,11 @@
 #endif
 
 #ifndef LN_BUMP_SIZE
-#define LN_BUMP_SIZE 4096
+#define LN_BUMP_SIZE 65536
 #endif
 
 #ifndef LN_HEAP_SIZE
-#define LN_HEAP_SIZE 24576
+#define LN_HEAP_SIZE 131072
 #endif
 
 #ifndef LN_CONTEXT_SIZE
@@ -251,8 +251,13 @@ ln_uint_t ln_eval_expr(int exec);
 ln_uint_t ln_eval_stat(int exec);
 ln_uint_t ln_eval(int exec);
 
+enum {
+  ln_panic_no_memory,
+};
+
 #ifdef LN_HANDLE
 extern int ln_func_handle(ln_uint_t *value, ln_uint_t hash);
+extern void ln_panic_handle(int error);
 #endif
 
 #endif

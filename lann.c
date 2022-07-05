@@ -320,7 +320,6 @@ char ln_read(int in_string) {
 ln_word_t ln_take(void) {
   ln_words_total++;
   
-  /*
   if (ln_last_curr < ln_last_next && ln_last_curr == ln_code_offset) {
     ln_last_curr = ln_last_next;
     
@@ -331,7 +330,6 @@ ln_word_t ln_take(void) {
       return ln_last;
     }
   }
-  */
   
   ln_uint_t offset = ln_bump_offset;
   char *token = ln_data + offset;

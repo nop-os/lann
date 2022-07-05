@@ -61,3 +61,4 @@ while true: begin
 end
 
 put_text("\n> done!\n")
+stats()

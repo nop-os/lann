@@ -303,3 +303,12 @@ int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
   
   return 0;
 }
+
+void ln_panic_handle(int error) {
+  if (error == ln_panic_no_memory) {
+    printf("lann: no more memory available\n");
+    stats_lann();
+    
+    exit(1);
+  }
+}
