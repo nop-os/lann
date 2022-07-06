@@ -250,13 +250,8 @@ ln_uint_t ln_eval_expr(int exec);
 ln_uint_t ln_eval_stat(int exec);
 ln_uint_t ln_eval(int exec);
 
-enum {
-  ln_panic_no_memory,
-};
-
 #ifdef LN_HANDLE
 extern int ln_func_handle(ln_uint_t *value, ln_uint_t hash);
-extern void ln_panic_handle(int error);
 #endif
 
 #endif

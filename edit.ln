@@ -1,5 +1,12 @@
 let ansi_invert: "\x1B[7m"
 let ansi_normal: "\x1B[27m"
+
+# let ansi_invert: "\x1B[30m\x1B[47m"
+# let ansi_normal: "\x1B[97m\x1B[44m"
+
+# let ansi_invert: "\x1B[38;2;0;0;0m\x1B[48;2;170;170;170m"
+# let ansi_normal: "\x1B[38;2;255;255;255m\x1B[48;2;0;0;255m"
+
 let ansi_clear: "\x1B[2J"
 let ansi_fill: "\x1B[0K"
 
@@ -79,8 +86,8 @@ func draw_ui: block begin
     printf("[]^X[] cut ", ansi_invert, ansi_normal)
     printf("[]^V[] paste ", ansi_invert, ansi_normal)
     printf("[]^F[] find/replace ", ansi_invert, ansi_normal) # todo
-    printf("[]^I[] indent ", ansi_invert, ansi_normal) # todo
-    printf("[]^K[] unindent ", ansi_invert, ansi_normal) # todo
+    printf("[]^I[] indent ", ansi_invert, ansi_normal)
+    printf("[]^K[] unindent ", ansi_invert, ansi_normal)
   end else: begin
     printf("[]^Q[] quit ", ansi_invert, ansi_normal)
     printf("[]^S[] save ", ansi_invert, ansi_normal)
@@ -408,11 +415,26 @@ func edit_enter: block begin
   let prev_line: get(lines, cursor_y)
   let prev_size: str_size(prev_line)
   
-  let curr_line: mem_alloc((prev_size - cursor_x) + 1)
-  str_copy(curr_line, prev_line + cursor_x)
+  let indent_level: 0
+  
+  if get(args, 0): begin
+    while mem_read(prev_line + indent_level) = ' ': begin
+      let indent_level: indent_level + 1
+    end
+  end
+  
+  let curr_line: mem_alloc((prev_size - cursor_x) + indent_level + 1)
+  str_copy(curr_line + indent_level, prev_line + cursor_x)
   
   let prev_line: mem_realloc(prev_line, cursor_x + 1)
   mem_write(prev_line + cursor_x, 0)
+  
+  let cursor_x: 0
+  
+  while cursor_x < indent_level: begin
+    mem_write(curr_line + cursor_x, ' ')
+    let cursor_x: cursor_x + 1
+  end
   
   mem_move(
     lines + (cursor_y + 2) * size_of(pointer),
@@ -424,8 +446,6 @@ func edit_enter: block begin
   set(lines, cursor_y + 1, curr_line)
   
   let line_count: line_count + 1
-  
-  let cursor_x: 0
   let cursor_y: cursor_y + 1
   
   let update_mode: 3
@@ -555,25 +575,30 @@ while true: block begin
           mem_write(line + 1, ' ')
           
           if index = cursor_y: let cursor_x: cursor_x + 2
+          if index = clip_y: let clip_x: clip_x + 2
         end else if chr = edit_ctrl('k'): begin
           if mem_read(line) = ' ': begin
             mem_move(line, line + 1, size)
             let line: mem_realloc(line, size)
             
             if index = cursor_y: let cursor_x: cursor_x - 1
+            if index = clip_y: let clip_x: clip_x - 1
             
             if mem_read(line) = ' ': begin
               mem_move(line, line + 1, size)
               let line: mem_realloc(line, size)
               
               if index = cursor_y: let cursor_x: cursor_x - 1
+              if index = clip_y: let clip_x: clip_x - 1
             end
           end
         end
         
         set(lines, index, line)
+        let index: index + 1
       end
       
+      let dirty: true
       let update_mode: 3
     end else if chr = '\x1B': begin 
       get_char() # skip '['
@@ -643,13 +668,13 @@ while true: block begin
         let index: 0
         
         while mem_read(clipboard + index): begin
-          if mem_read(clipboard + index) = '\n': edit_enter()
+          if mem_read(clipboard + index) = '\n': edit_enter(false)
           else: edit_write(mem_read(clipboard + index))
           
           let index: index + 1
         end
       end else if chr = '\r' or chr = '\n': begin
-        edit_enter()
+        edit_enter(true)
       end else if chr >= ' ' and chr != '\x7F': begin
         edit_write(chr)
       end
@@ -697,7 +722,10 @@ while true: block begin
     end else if chr = '\x08' or chr = '\x7F': begin
       edit_back()
     end else if chr = '\r' or chr = '\n': begin
-      edit_enter()
+      edit_enter(true)
+    end else if chr = '\t': begin
+      edit_write(' ')
+      edit_write(' ')
     end else if chr >= ' ': begin
       edit_write(chr)
     end
