@@ -184,6 +184,34 @@ ln_uint_t ln_heap_alloc(ln_uint_t size) {
     block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + block->size);
   }
   
+  ln_heap_defrag();
+  block = (ln_heap_t *)(ln_data + ln_bump_size);
+  
+  while ((uint8_t *)(block) < ln_data + ln_bump_size + ln_heap_size) {
+    if (block->free) {
+      if (block->size == size) {
+        block->free = 0;
+        
+        ln_heap_used += size;
+        return LN_PTR_TO_VALUE((ln_uint_t)(((uint8_t *)(block) - ln_data) + sizeof(ln_heap_t)));
+      } else if (block->size >= size + sizeof(ln_heap_t)) {
+        ln_heap_t *new_block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + size);
+        ln_uint_t old_size = block->size;
+        
+        block->size = size;
+        block->free = 0;
+        
+        new_block->size = old_size - (block->size + sizeof(ln_heap_t));
+        new_block->free = 1;
+        
+        ln_heap_used += size + sizeof(ln_heap_t);
+        return LN_PTR_TO_VALUE((ln_uint_t)(((uint8_t *)(block) - ln_data) + sizeof(ln_heap_t)));
+      }
+    }
+    
+    block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + block->size);
+  }
+  
   return LN_NULL;
 }
 
@@ -207,7 +235,6 @@ void ln_heap_free(ln_uint_t ptr) {
   block->free = 1;
   
   ln_heap_used -= block->size;
-  ln_heap_defrag();
 }
 
 ln_uint_t ln_bump_value(ln_uint_t value) {
