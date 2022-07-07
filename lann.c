@@ -1,16 +1,17 @@
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>
 #include <lann.h>
 
-uint8_t *ln_data = NULL;
-ln_uint_t ln_bump_offset = 0, ln_bump_args = 0;
+int (*ln_func_handle)(ln_uint_t *, ln_uint_t) = NULL;
 
-ln_uint_t ln_heap_used = 0;
+uint8_t *ln_data = NULL;
+ln_uint_t ln_bump_size = 0, ln_bump_offset = 0, ln_bump_args = 0;
+
+ln_uint_t ln_heap_size = 0, ln_heap_used = 0;
 int ln_heap_inited = 0;
 
 ln_entry_t *ln_context = NULL;
-ln_uint_t ln_context_offset = 0;
+ln_uint_t ln_context_size = 0, ln_context_offset = 0;
 
 const char *ln_code = NULL;
 ln_uint_t ln_code_offset = 0;
@@ -24,10 +25,6 @@ ln_uint_t ln_return = LN_NULL;
 ln_uint_t ln_words_total = 0, ln_words_saved = 0;
 
 const int ln_type_match[4] = {ln_type_number, ln_type_number, ln_type_pointer, ln_type_error};
-
-#ifndef LN_HANDLE
-static int ln_func_handle(ln_uint_t *value, ln_uint_t hash) { return 0; }
-#endif
 
 char ln_upper(char chr) {
   if (chr >= 'a' && chr <= 'z') return (chr - 'a') + 'A';
@@ -122,22 +119,28 @@ ln_uint_t ln_fixed(const char *text) {
   return value;
 }
 
-void ln_heap_init(void) {
-  ln_heap_inited = 1;
+void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t)) {
+  ln_bump_size =    (4  * size) / 16;
+  ln_context_size = (1  * size) / 16;
+  ln_heap_size =    (11 * size) / 16;
   
-  ln_heap_t *block = (ln_heap_t *)(ln_data + LN_BUMP_SIZE);
+  ln_context = buffer;
+  ln_data = buffer + ln_context_size;
   
-  block->size = LN_HEAP_SIZE - sizeof(ln_heap_t);
+  ln_func_handle = func_handle;
+  
+  ln_heap_t *block = (ln_heap_t *)(ln_data + ln_bump_size);
+  
+  block->size = ln_heap_size - sizeof(ln_heap_t);
   block->free = 1;
   
   ln_heap_used = sizeof(ln_heap_t);
 }
 
 void ln_heap_defrag(void) {
-  if (!ln_heap_inited) ln_heap_init();
-  ln_heap_t *block = (ln_heap_t *)(ln_data + LN_BUMP_SIZE);
+  ln_heap_t *block = (ln_heap_t *)(ln_data + ln_bump_size);
   
-  while ((uint8_t *)(block) < ln_data + LN_BUMP_SIZE + LN_HEAP_SIZE) {
+  while ((uint8_t *)(block) < ln_data + ln_bump_size + ln_heap_size) {
     ln_heap_t *next_block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + block->size);
     
     if (block->free) {
@@ -154,10 +157,9 @@ void ln_heap_defrag(void) {
 }
 
 ln_uint_t ln_heap_alloc(ln_uint_t size) {
-  if (!ln_heap_inited) ln_heap_init();
-  ln_heap_t *block = (ln_heap_t *)(ln_data + LN_BUMP_SIZE);
+  ln_heap_t *block = (ln_heap_t *)(ln_data + ln_bump_size);
   
-  while ((uint8_t *)(block) < ln_data + LN_BUMP_SIZE + LN_HEAP_SIZE) {
+  while ((uint8_t *)(block) < ln_data + ln_bump_size + ln_heap_size) {
     if (block->free) {
       if (block->size == size) {
         block->free = 0;
@@ -186,7 +188,6 @@ ln_uint_t ln_heap_alloc(ln_uint_t size) {
 }
 
 ln_uint_t ln_heap_realloc(ln_uint_t ptr, ln_uint_t new_size) {
-  if (!ln_heap_inited) ln_heap_init();
   if (ptr == LN_NULL) return ln_heap_alloc(new_size);
   
   ln_uint_t new_ptr = ln_heap_alloc(new_size);
@@ -200,7 +201,6 @@ ln_uint_t ln_heap_realloc(ln_uint_t ptr, ln_uint_t new_size) {
 }
 
 void ln_heap_free(ln_uint_t ptr) {
-  if (!ln_heap_inited) ln_heap_init();
   if (ptr == LN_NULL) return;
   
   ln_heap_t *block = (ln_heap_t *)(ln_data + (LN_VALUE_TO_PTR(ptr) - sizeof(ln_heap_t)));
@@ -685,7 +685,13 @@ ln_uint_t ln_eval_0(int exec) {
       ln_bump_value(LN_NULL);
       ln_uint_t value = LN_UNDEFINED;
       
-      if (!ln_func_handle(&value, word.data)) {
+      int handled = 0;
+      
+      if (ln_func_handle) {
+        handled = ln_func_handle(&value, word.data);
+      }
+      
+      if (!handled) {
         for (int i = ln_context_offset - 1; i >= 0; i--) {
           if (ln_context[i].name == word.data) {
             const char *old_code = ln_code;

@@ -4,9 +4,11 @@
 #include <stdio.h>
 #include <lann.h>
 
+extern int repl_handle(ln_uint_t *value, ln_uint_t hash);
+
 int main(int argc, const char **argv) {
-  ln_data = malloc(LN_BUMP_SIZE + LN_HEAP_SIZE);
-  ln_context = malloc(LN_CONTEXT_SIZE * sizeof(ln_entry_t));
+  ln_uint_t mem_size = 1048576;
+  ln_init(malloc(mem_size), mem_size, repl_handle);
   
   const char *path = "repl.ln";
   if (argc >= 2) path = argv[1];

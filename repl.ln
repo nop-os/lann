@@ -1,6 +1,6 @@
 put_text("lann r01, by segfaultdev\n");
 
-array repl_text: 256
+array repl_text: 80
 
 while true: begin
   printf("> ")

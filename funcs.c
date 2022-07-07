@@ -115,9 +115,9 @@ static ln_uint_t get_text_lann(void) {
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
   #ifdef __NOP__
-  gets_s(ln_data + LN_VALUE_TO_PTR(value), LN_BUMP_SIZE);
+  gets_s(ln_data + LN_VALUE_TO_PTR(value), ln_bump_size);
   #else
-  fgets(ln_data + LN_VALUE_TO_PTR(value), LN_BUMP_SIZE, stdin);
+  fgets(ln_data + LN_VALUE_TO_PTR(value), ln_bump_size, stdin);
   #endif
   
   size_t length = strlen(ln_data + LN_VALUE_TO_PTR(value));
@@ -201,20 +201,20 @@ static ln_uint_t get_term_lann(void) {
 static void stats_lann(void) {
   printf("bump: %u/%u bytes used (%d%%)\n",
     ln_bump_offset,
-    LN_BUMP_SIZE,
-    (100 * ln_bump_offset + LN_BUMP_SIZE / 2) / LN_BUMP_SIZE
+    ln_bump_size,
+    (100 * ln_bump_offset + ln_bump_size / 2) / ln_bump_size
   );
   
   printf("heap: %u/%u bytes used (%d%%)\n",
     ln_heap_used,
-    LN_HEAP_SIZE,
-    (100 * ln_heap_used + LN_HEAP_SIZE / 2) / LN_HEAP_SIZE
+    ln_heap_size,
+    (100 * ln_heap_used + ln_heap_size / 2) / ln_heap_size
   );
   
   printf("vars: %u/%u bytes used (%d%%)\n",
     ln_context_offset * sizeof(ln_entry_t),
-    LN_CONTEXT_SIZE * sizeof(ln_entry_t),
-    (100 * ln_context_offset + LN_CONTEXT_SIZE / 2) / LN_CONTEXT_SIZE
+    ln_context_size,
+    (100 * ln_context_offset * sizeof(ln_entry_t) + ln_context_size / 2) / ln_context_size
   );
   
   printf("word: %u/%u words skipped (%d%%)\n",
@@ -224,7 +224,7 @@ static void stats_lann(void) {
   );
 }
 
-int ln_func_handle(ln_uint_t *value, ln_uint_t hash) {
+int repl_handle(ln_uint_t *value, ln_uint_t hash) {
   if (hash == ln_hash("printf")) {
     printf_lann();
     

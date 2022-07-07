@@ -26,27 +26,15 @@
 #include <stdint.h>
 
 #ifndef LN_UINT_TYPE
-#define LN_UINT_TYPE uint64_t
+#define LN_UINT_TYPE uint32_t
 #endif
 
 #ifndef LN_INT_TYPE
-#define LN_INT_TYPE int64_t
+#define LN_INT_TYPE int32_t
 #endif
 
 #ifndef LN_FIXED_DOT
-#define LN_FIXED_DOT 24
-#endif
-
-#ifndef LN_BUMP_SIZE
-#define LN_BUMP_SIZE 65536
-#endif
-
-#ifndef LN_HEAP_SIZE
-#define LN_HEAP_SIZE 65536
-#endif
-
-#ifndef LN_CONTEXT_SIZE
-#define LN_CONTEXT_SIZE 1024
+#define LN_FIXED_DOT 6
 #endif
 
 #define LN_CHAR_DELIM ' '
@@ -169,11 +157,11 @@ enum {
 
 struct ln_word_t {
   uint8_t type;
-  ln_uint_t data; // offsets for strings and names, value for numbers
+  ln_uint_t data;
 };
 
 struct ln_entry_t {
-  ln_uint_t name, offset; // offset to data
+  ln_uint_t name, offset;
 };
 
 struct ln_heap_t {
@@ -183,14 +171,16 @@ struct ln_heap_t {
   uint8_t data[];
 };
 
-extern uint8_t *ln_data;
-extern ln_uint_t ln_bump_offset, ln_bump_args;
+extern int (*ln_func_handle)(ln_uint_t *, ln_uint_t);
 
-extern ln_uint_t ln_heap_used;
+extern uint8_t *ln_data;
+extern ln_uint_t ln_bump_size, ln_bump_offset, ln_bump_args;
+
+extern ln_uint_t ln_heap_size, ln_heap_used;
 extern int ln_heap_inited;
 
 extern ln_entry_t *ln_context;
-extern ln_uint_t ln_context_offset;
+extern ln_uint_t ln_context_size, ln_context_offset;
 
 extern const char *ln_code;
 extern ln_uint_t ln_code_offset;
@@ -215,6 +205,8 @@ int ln_case_equal(const char *str_1, const char *str_2);
 
 ln_uint_t ln_hash(const char *text);
 ln_uint_t ln_fixed(const char *text);
+
+void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t));
 
 void      ln_heap_init(void);
 void      ln_heap_defrag(void);
@@ -249,9 +241,5 @@ ln_uint_t ln_eval_6(int exec); // and, or, xor
 ln_uint_t ln_eval_expr(int exec);
 ln_uint_t ln_eval_stat(int exec);
 ln_uint_t ln_eval(int exec);
-
-#ifdef LN_HANDLE
-extern int ln_func_handle(ln_uint_t *value, ln_uint_t hash);
-#endif
 
 #endif

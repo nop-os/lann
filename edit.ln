@@ -394,7 +394,7 @@ func edit_back: block begin
     let line: get(lines, cursor_y)
     let size: str_size(line)
     
-    mem_move(line + (cursor_x - 1), line + cursor_x, size - cursor_x)
+    mem_move(line + (cursor_x - 1), line + cursor_x, (size + 1) - cursor_x)
     let line: mem_realloc(line, size)
     
     set(lines, cursor_y, line)
