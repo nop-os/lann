@@ -1,0 +1,24 @@
+1. lann's syntax
+
+2. lann's built-in functions
+
+// type_of(value) -> 0 = number, 1 = pointer, 2 = error
+// size_of(type) -> always returns sizeof(ln_uint_t)
+// to_type(value, type)
+// get(ptr, index)
+// set(ptr, index, value)
+// mem_read(ptr)
+// mem_write(ptr, byte)
+// mem_copy(ptr_1, ptr_2, count)
+// mem_move(ptr_1, ptr_2, count)
+// mem_test(ptr_1, ptr_2, count)
+// mem_alloc(size)
+// mem_realloc(ptr, size)
+// mem_free(ptr)
+// str_copy(ptr_1, ptr_2)
+// str_test(ptr_1, ptr_2)
+// str_size(ptr)
+// str_format(ptr, ...)
+// eval(ptr)
+
+3. custom C functions

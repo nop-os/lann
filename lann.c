@@ -659,6 +659,28 @@ int ln_expect_2(uint8_t type_1, uint8_t type_2) {
   return 1;
 }
 
+ln_int_t ln_muliply(ln_int_t x, ln_int_t y) {
+  const int bits = sizeof(ln_uint_t) << 3;
+  int sign = 0;
+  
+  if (x < 0) sign = 1 - sign, x = -x;
+  if (y < 0) sign = 1 - sign, y = -y;
+  
+  ln_uint_t a = x >> (bits >> 1);
+  ln_uint_t b = x & ((1 << (bits >> 1)) - 1);
+  ln_uint_t c = y >> (bits >> 1);
+  ln_uint_t d = y & ((1 << (bits >> 1)) - 1);
+  
+  ln_int_t z = (ln_int_t)(((a * c) << (bits - LN_FIXED_DOT)) + (((a * d) + (b * c)) << ((bits >> 1) - LN_FIXED_DOT)) + ((b * d) >> LN_FIXED_DOT));
+  if (sign) z = -z;
+  
+  return z;
+}
+
+ln_int_t ln_divide(ln_int_t x, ln_int_t y) {
+  
+}
+
 ln_uint_t ln_eval_0(int exec) {
   if (ln_back || ln_break) exec = 0;
   ln_word_t word;
@@ -1507,8 +1529,7 @@ ln_uint_t ln_eval_2(int exec) {
     
     if (exec) {
       if (word.type == ln_word_aster) {
-        // TODO: support bigger numbers
-        left = LN_FIXED_TO_VALUE((LN_VALUE_TO_FIXED(left) * LN_VALUE_TO_FIXED(right)) >> LN_FIXED_DOT);
+        left = LN_FIXED_TO_VALUE(ln_muliply(LN_VALUE_TO_FIXED(left), LN_VALUE_TO_FIXED(right)));
       } else if (word.type == ln_word_slash) {
         // TODO: support bigger numbers
         

@@ -1,28 +1,6 @@
 #ifndef __LANN_H__
 #define __LANN_H__
 
-// BUILT-IN FUNCTIONS:
-// type_of(value) -> 0 = number, 1 = pointer, 2 = error
-// size_of(type) -> always returns sizeof(ln_uint_t)
-// to_type(value, type)
-// get(ptr, index)
-// set(ptr, index, value)
-// mem_read(ptr)
-// mem_write(ptr, byte)
-// mem_copy(ptr_1, ptr_2, count)
-// mem_move(ptr_1, ptr_2, count)
-// mem_test(ptr_1, ptr_2, count)
-// mem_alloc(size)
-// mem_realloc(ptr, size)
-// mem_free(ptr)
-// str_copy(ptr_1, ptr_2)
-// str_test(ptr_1, ptr_2)
-// str_size(ptr)
-// str_format(ptr, ...)
-// eval(ptr)
-
-// args -> built-in pointer :D
-
 #include <stdint.h>
 
 #ifndef LN_UINT_TYPE
@@ -41,30 +19,23 @@
 #define LN_CHAR_EOF   '\0'
 
 #define LN_VALUE_TYPE_RAW(x) ((x) >> (8 * sizeof(x) - 2))
-#define LN_VALUE_TYPE(x) (ln_type_match[LN_VALUE_TYPE_RAW((x))])
-
-#define LN_VALUE_SIGN(x)   (((x) >> (8 * sizeof(x) - 2)) & 1)
-#define LN_VALUE_ABS(x)    (LN_FIXED_TO_VALUE(LN_FIXED_ABS(LN_VALUE_TO_FIXED((x)))))
-
+#define LN_VALUE_TYPE(x)     (ln_type_match[LN_VALUE_TYPE_RAW((x))])
+#define LN_VALUE_SIGN(x)     (((x) >> (8 * sizeof(x) - 2)) & 1)
+#define LN_VALUE_ABS(x)      (LN_FIXED_TO_VALUE(LN_FIXED_ABS(LN_VALUE_TO_FIXED((x)))))
 #define LN_VALUE_TO_RAW(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 1)) - 1))
 #define LN_VALUE_TO_FIXED(x) ((ln_int_t)((x) | (LN_VALUE_SIGN((x)) << (8 * sizeof(x) - 1))))
 #define LN_VALUE_TO_INT(x)   (LN_VALUE_TO_FIXED((x)) / (1 << LN_FIXED_DOT))
-
-#define LN_FIXED_SIGN(x) ((ln_uint_t)((x)) >> (8 * sizeof(x) - 1))
-#define LN_FIXED_ABS(x)  (LN_FIXED_SIGN((x)) ? -(x) : (x))
-
-#define LN_VALUE_NEGATE(x) (LN_FIXED_TO_VALUE(-LN_VALUE_TO_FIXED((x))))
-
+#define LN_FIXED_SIGN(x)     ((ln_uint_t)((x)) >> (8 * sizeof(x) - 1))
+#define LN_FIXED_ABS(x)      (LN_FIXED_SIGN((x)) ? -(x) : (x))
+#define LN_VALUE_NEGATE(x)   (LN_FIXED_TO_VALUE(-LN_VALUE_TO_FIXED((x))))
 #define LN_FIXED_TO_VALUE(x) (((ln_uint_t)((x)) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1)) | (LN_FIXED_SIGN((x)) << (8 * sizeof(x) - 2)))
 #define LN_INT_TO_VALUE(x)   (LN_FIXED_TO_VALUE((ln_int_t)((x)) << LN_FIXED_DOT))
+#define LN_VALUE_TO_PTR(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
+#define LN_PTR_TO_VALUE(x)   ((x) | ((ln_uint_t)(1) << (8 * sizeof(x) - 1)))
+#define LN_VALUE_TO_ERR(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
+#define LN_ERR_TO_VALUE(x)   (LN_PTR_TO_VALUE((x)) | ((ln_uint_t)(1) << (8 * sizeof(x) - 2)))
 
-#define LN_VALUE_TO_PTR(x) ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
-#define LN_PTR_TO_VALUE(x) ((x) | ((ln_uint_t)(1) << (8 * sizeof(x) - 1)))
-
-#define LN_VALUE_TO_ERR(x) ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
-#define LN_ERR_TO_VALUE(x) (LN_PTR_TO_VALUE((x)) | ((ln_uint_t)(1) << (8 * sizeof(x) - 2)))
-
-// note: floating point operations are not recommended, as it requires a software floating point implementation or an FPU, and not everyone has those :p
+// warning: do not use
 #define LN_VALUE_TO_FLOAT(x) ((float)(LN_VALUE_TO_FIXED((x))) / (float)(1 << LN_FIXED_DOT)) 
 #define LN_FLOAT_TO_VALUE(x) (LN_FIXED_TO_VALUE((x) * (float)(1 << LN_FIXED_DOT)))
 
@@ -229,6 +200,9 @@ ln_word_t ln_take(void);
 ln_word_t ln_peek(void);
 int       ln_expect(ln_word_t *ptr, uint8_t type);
 int       ln_expect_2(uint8_t type_1, uint8_t type_2);
+
+ln_int_t ln_multiply(ln_int_t x, ln_int_t y);
+ln_int_t ln_divide(ln_int_t x, ln_int_t y);
 
 ln_uint_t ln_eval_0(int exec);
 ln_uint_t ln_eval_1(int exec); // (-), !

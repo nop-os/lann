@@ -12,6 +12,8 @@ Note that currently lann is a project fully maintained by a single person, so sl
 - Fast and simple interpreter (no intermediate representations, code is ran as it's being lexed and parsed).
 - Fully embeddable, minimal standard library requirements and 100% written in C.
 - Built-in and custom heap allocator and stack for safe and sandboxed memory access.
+- Function built-ins kept to a minimum (things like printf() and get_text() are optional).
+- Extensively documented syntax and usage (see `lann.txt`, WIP).
 
 ## Example
 
@@ -56,16 +58,12 @@ To run a lann script stored in a file, run the program with that file as an argu
 
 Embedding lann into an existing project is as easy as copying the source and header files, `lann.c` and `include/lann.h`, and compiling them alongside the project.
 
-If you want to be able to add custom C functions, pass in `-DLN_HANDLE` to GCC. You can also set the memory size (`-DLN_BUMP_SIZE=...`), variable count (`-DLN_CONTEXT_SIZE=...`), value type (`-DLN_INT_TYPE=... -DLN_UINT_TYPE=...`) and fixed point dot position (`-DLN_FIXED_DOT=...`) in your compile script or Makefile. Do not change this inside a source file, as then lann's source file will be unaffected by those changes.
-
 ## To-Do list
 
 Here are some things you can help with (if you want, of course):
 
-- Make multiplication and division work with bigger numbers (and without using floats).
+- Make division work with bigger numbers (and without using floats).
 - Add bound checks to everything pointer-related.
-- Add size limits and clean error messages for when memory is full.
-- Remove memmove() dependency on str_format().
 - Macros with macro-end blocks.
 
 ## Licensing

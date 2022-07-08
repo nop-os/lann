@@ -7,5 +7,5 @@ func pow: block begin
   else: give pow(base, exp - 1) * base
 end
 
-printf("2 ** 14 = []\n", pow(2, 14))
+printf("2 ** 20 = []\n", pow(2, 20))
 stats()
