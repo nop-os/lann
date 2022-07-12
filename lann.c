@@ -110,7 +110,7 @@ ln_uint_t ln_fixed(const char *text) {
   while (ptr = ln_find_char(digits, ln_upper(*text))) {
     if (!(*ptr)) break;
     
-    value += ((1 << LN_FIXED_DOT) * (ptr - digits)) / factor;
+    value += (((ln_uint_t)(1) << LN_FIXED_DOT) * (ptr - digits)) / factor;
     text++;
     
     factor *= base;
@@ -271,7 +271,7 @@ void ln_bump_text_fixed(ln_int_t fixed, int first) {
   ln_data[ln_bump_offset++] = '0' + digit;
   if (!first) return;
   
-  fixed = (fixed % (1 << LN_FIXED_DOT)) * 10;
+  fixed = (fixed % ((ln_uint_t)(1) << LN_FIXED_DOT)) * 10;
   
   if (!fixed) return;
   ln_data[ln_bump_offset++] = '.';
@@ -280,7 +280,7 @@ void ln_bump_text_fixed(ln_int_t fixed, int first) {
     digit = (fixed >> LN_FIXED_DOT) % 10;
     ln_data[ln_bump_offset++] = '0' + digit;
     
-    if (!(fixed % (1 << LN_FIXED_DOT))) break;
+    if (!(fixed % ((ln_uint_t)(1) << LN_FIXED_DOT))) break;
     fixed *= 10;
   }
 }
@@ -667,9 +667,9 @@ ln_int_t ln_muliply(ln_int_t x, ln_int_t y) {
   if (y < 0) sign = 1 - sign, y = -y;
   
   ln_uint_t a = x >> (bits >> 1);
-  ln_uint_t b = x & ((1 << (bits >> 1)) - 1);
+  ln_uint_t b = x & (((ln_uint_t)(1) << (bits >> 1)) - 1);
   ln_uint_t c = y >> (bits >> 1);
-  ln_uint_t d = y & ((1 << (bits >> 1)) - 1);
+  ln_uint_t d = y & (((ln_uint_t)(1) << (bits >> 1)) - 1);
   
   ln_int_t z = (ln_int_t)(((a * c) << (bits - LN_FIXED_DOT)) + (((a * d) + (b * c)) << ((bits >> 1) - LN_FIXED_DOT)) + ((b * d) >> LN_FIXED_DOT));
   if (sign) z = -z;

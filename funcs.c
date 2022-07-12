@@ -23,7 +23,7 @@ static void print_fixed(ln_uint_t fixed, int first) {
   putchar('0' + digit);
   if (!first) return;
   
-  fixed = (fixed % (1 << LN_FIXED_DOT)) * 10;
+  fixed = (fixed % ((ln_uint_t)(1) << LN_FIXED_DOT)) * 10;
   
   if (!fixed) return;
   putchar('.');
@@ -32,7 +32,7 @@ static void print_fixed(ln_uint_t fixed, int first) {
     digit = (fixed >> LN_FIXED_DOT) % 10;
     putchar('0' + digit);
     
-    if (!(fixed % (1 << LN_FIXED_DOT))) break;
+    if (!(fixed % ((ln_uint_t)(1) << LN_FIXED_DOT))) break;
     fixed *= 10;
   }
 }
