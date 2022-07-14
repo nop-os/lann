@@ -3,6 +3,7 @@
 #else
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <termios.h>
 #include <unistd.h>
 #define putstr(str) printf("%s", str)
@@ -253,6 +254,14 @@ int repl_handle(ln_uint_t *value, ln_uint_t hash) {
     return 1;
   } else if (hash == ln_hash("get_term")) {
     *value = get_term_lann();
+    return 1;
+  } else if (hash == ln_hash("get_time")) {
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    
+    ln_uint_t fixed_time = ((tv.tv_usec << LN_FIXED_DOT) / 1000000) + (tv.tv_sec << LN_FIXED_DOT);
+    
+    *value = LN_FIXED_TO_VALUE(fixed_time);
     return 1;
   } else if (hash == ln_hash("stats")) {
     stats_lann();

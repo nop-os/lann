@@ -4,15 +4,15 @@
 #include <stdint.h>
 
 #ifndef LN_UINT_TYPE
-#define LN_UINT_TYPE uint32_t
+#define LN_UINT_TYPE uint64_t
 #endif
 
 #ifndef LN_INT_TYPE
-#define LN_INT_TYPE int32_t
+#define LN_INT_TYPE int64_t
 #endif
 
 #ifndef LN_FIXED_DOT
-#define LN_FIXED_DOT 6
+#define LN_FIXED_DOT 28
 #endif
 
 #define LN_CHAR_DELIM ' '

@@ -36,34 +36,46 @@ int ln_digit(char chr) {
 }
 
 const char *ln_find_char(const char *str, char chr) {
+  return strchr(str, chr);
+  
+  /*
   while (*str) {
     if (*str == chr) return str;
     str++;
   }
   
   return NULL;
+  */
 }
 
 int ln_equal(const char *str_1, const char *str_2) {
+  return !strcmp(str_1, str_2);
+  
+  /*
   for (;;) {
     if (*str_1 != *str_2) return 0;
     if (!(*str_1) || !(*str_2)) return 1;
     
     str_1++, str_2++;
   }
+  */
 }
 
 int ln_case_equal(const char *str_1, const char *str_2) {
+  return !strcmp(str_1, str_2);
+  
+  /*
   for (;;) {
     if (ln_upper(*str_1) != ln_upper(*str_2)) return 0;
     if (!(*str_1) || !(*str_2)) return 1;
     
     str_1++, str_2++;
   }
+  */
 }
 
 ln_uint_t ln_hash(const char *text) {
-  ln_uint_t hash = 0;
+  uint32_t hash = 0;
   
   const char *old_text = text;
   
@@ -476,82 +488,83 @@ ln_word_t ln_take(void) {
   }
   
   ln_bump_offset = offset;
+  ln_uint_t hash = ln_hash(token);
   
   if (!token[0]) {
     return (ln_word_t){.type = ln_word_eof};
-  } else if (ln_case_equal(token, "null")) {
+  } else if (hash == 0x3ADB3357) {
     return (ln_word_t){.type = ln_word_null};
-  } else if (ln_case_equal(token, "true")) {
+  } else if (hash == 0xB2F35C25) {
     return (ln_word_t){.type = ln_word_true};
-  } else if (ln_case_equal(token, "false")) {
+  } else if (hash == 0xFE25EF42) {
     return (ln_word_t){.type = ln_word_false};
-  } else if (ln_case_equal(token, "block")) {
+  } else if (hash == 0xE433D77D) {
     return (ln_word_t){.type = ln_word_block};
-  } else if (ln_case_equal(token, "begin")) {
+  } else if (hash == 0xB43529ED) {
     return (ln_word_t){.type = ln_word_begin};
-  } else if (ln_case_equal(token, "end")) {
+  } else if (hash == 0xB0C485D7) {
     return (ln_word_t){.type = ln_word_end};
-  } else if (ln_case_equal(token, "func")) {
+  } else if (hash == 0xFB4CC9FD) {
     return (ln_word_t){.type = ln_word_func};
-  } else if (ln_case_equal(token, "let")) {
+  } else if (hash == 0x8FCDD7CA) {
     return (ln_word_t){.type = ln_word_let};
-  } else if (ln_case_equal(token, "if")) {
+  } else if (hash == 0xBEBC8707) {
     return (ln_word_t){.type = ln_word_if};
-  } else if (ln_case_equal(token, "else")) {
+  } else if (hash == 0xA2F0E9D5) {
     return (ln_word_t){.type = ln_word_else};
-  } else if (ln_case_equal(token, "array")) {
+  } else if (hash == 0x7BD097A8) {
     return (ln_word_t){.type = ln_word_array};
-  } else if (ln_case_equal(token, "while")) {
+  } else if (hash == 0x75DE1D79) {
     return (ln_word_t){.type = ln_word_while};
-  } else if (ln_case_equal(token, "give")) {
+  } else if (hash == 0x47B74C0E) {
     return (ln_word_t){.type = ln_word_give};
-  } else if (ln_case_equal(token, "break")) {
+  } else if (hash == 0x632C8A8F) {
     return (ln_word_t){.type = ln_word_break};
-  } else if (ln_case_equal(token, "ref")) {
+  } else if (hash == 0xBB95F893) {
     return (ln_word_t){.type = ln_word_ref};
-  } else if (ln_case_equal(token, "args")) {
+  } else if (hash == 0x5B2D1364) {
     return (ln_word_t){.type = ln_word_args};
-  } else if (ln_case_equal(token, "number")) {
+  } else if (hash == 0x8A2A4CA2) {
     return (ln_word_t){.type = ln_word_type_number};
-  } else if (ln_case_equal(token, "pointer")) {
+  } else if (hash == 0x5D15D0DA) {
     return (ln_word_t){.type = ln_word_type_pointer};
-  } else if (ln_case_equal(token, "error")) {
+  } else if (hash == 0xC9206CAC) {
     return (ln_word_t){.type = ln_word_type_error};
-  } else if (ln_case_equal(token, "type_of")) {
+  } else if (hash == 0x52F4942A) {
     return (ln_word_t){.type = ln_word_func_type_of};
-  } else if (ln_case_equal(token, "size_of")) {
+  } else if (hash == 0xF511C603) {
     return (ln_word_t){.type = ln_word_func_size_of};
-  } else if (ln_case_equal(token, "to_type")) {
+  } else if (hash == 0x46EF16A5) {
     return (ln_word_t){.type = ln_word_func_to_type};
-  } else if (ln_case_equal(token, "get")) {
+  } else if (hash == 0xBEB3226C) {
     return (ln_word_t){.type = ln_word_func_get};
-  } else if (ln_case_equal(token, "set")) {
+  } else if (hash == 0x950781AF) {
     return (ln_word_t){.type = ln_word_func_set};
-  } else if (ln_case_equal(token, "mem_read")) {
+  } else if (hash == 0x797DF806) {
     return (ln_word_t){.type = ln_word_func_mem_read};
-  } else if (ln_case_equal(token, "mem_write")) {
+  } else if (hash == 0x539BED14) {
     return (ln_word_t){.type = ln_word_func_mem_write};
-  } else if (ln_case_equal(token, "mem_copy")) {
+  } else if (hash == 0x90B7F7CD) {
     return (ln_word_t){.type = ln_word_func_mem_copy};
-  } else if (ln_case_equal(token, "mem_move")) {
+  } else if (hash == 0x44B5FA2F) {
     return (ln_word_t){.type = ln_word_func_mem_move};
-  } else if (ln_case_equal(token, "mem_test")) {
+  } else if (hash == 0x8920D764) {
     return (ln_word_t){.type = ln_word_func_mem_test};
-  } else if (ln_case_equal(token, "mem_alloc")) {
+  } else if (hash == 0x2F1DC72D) {
     return (ln_word_t){.type = ln_word_func_mem_alloc};
-  } else if (ln_case_equal(token, "mem_realloc")) {
+  } else if (hash == 0xA9D2BEF2) {
     return (ln_word_t){.type = ln_word_func_mem_realloc};
-  } else if (ln_case_equal(token, "mem_free")) {
+  } else if (hash == 0x3F3A225D) {
     return (ln_word_t){.type = ln_word_func_mem_free};
-  } else if (ln_case_equal(token, "str_copy")) {
+  } else if (hash == 0xF40BF840) {
     return (ln_word_t){.type = ln_word_func_str_copy};
-  } else if (ln_case_equal(token, "str_test")) {
+  } else if (hash == 0xB054207A) {
     return (ln_word_t){.type = ln_word_func_str_test};
-  } else if (ln_case_equal(token, "str_size")) {
+  } else if (hash == 0x0C6D9FCF) {
     return (ln_word_t){.type = ln_word_func_str_size};
-  } else if (ln_case_equal(token, "str_format")) {
+  } else if (hash == 0xAFB47CA3) {
     return (ln_word_t){.type = ln_word_func_str_format};
-  } else if (ln_case_equal(token, "eval")) {
+  } else if (hash == 0x5C4D6BEF) {
     return (ln_word_t){.type = ln_word_func_eval};
   } else if (token[0] == ',') {
     return (ln_word_t){.type = ln_word_comma};
@@ -583,18 +596,18 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_bit_or};
   } else if (token[0] == '^') {
     return (ln_word_t){.type = ln_word_bit_xor};
-  } else if (ln_case_equal(token, "and")) {
+  } else if (hash == 0x6BEDA11E) {
     return (ln_word_t){.type = ln_word_bool_and};
-  } else if (ln_case_equal(token, "or")) {
+  } else if (hash == 0xEF9461CA) {
     return (ln_word_t){.type = ln_word_bool_or};
-  } else if (ln_case_equal(token, "xor")) {
+  } else if (hash == 0x4D86273A) {
     return (ln_word_t){.type = ln_word_bool_xor};
   } else if (ln_digit(token[0])) {
     return (ln_word_t){.type = ln_word_number, .data = ln_fixed(token)};
   } else if (in_string && string_chr == '\'') {
     return (ln_word_t){.type = ln_word_number, .data = ((ln_uint_t)(token[0]) << LN_FIXED_DOT)};
   } else {
-    return (ln_word_t){.type = ln_word_name, .data = ln_hash(ln_data + offset)};
+    return (ln_word_t){.type = ln_word_name, .data = hash};
   }
 }
 
