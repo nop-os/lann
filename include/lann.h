@@ -20,7 +20,7 @@
 
 #define LN_VALUE_TYPE_RAW(x) ((x) >> (8 * sizeof(x) - 2))
 #define LN_VALUE_TYPE(x)     (ln_type_match[LN_VALUE_TYPE_RAW((x))])
-#define LN_VALUE_SIGN(x)     (((x) >> (8 * sizeof(x) - 2)) & 1)
+#define LN_VALUE_SIGN(x)     ((x) >> (8 * sizeof(x) - 2))
 #define LN_VALUE_ABS(x)      (LN_FIXED_TO_VALUE(LN_FIXED_ABS(LN_VALUE_TO_FIXED((x)))))
 #define LN_VALUE_TO_RAW(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 1)) - 1))
 #define LN_VALUE_TO_FIXED(x) ((ln_int_t)((x) | (LN_VALUE_SIGN((x)) << (8 * sizeof(x) - 1))))
@@ -33,7 +33,7 @@
 #define LN_VALUE_TO_PTR(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
 #define LN_PTR_TO_VALUE(x)   ((x) | ((ln_uint_t)(1) << (8 * sizeof(x) - 1)))
 #define LN_VALUE_TO_ERR(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
-#define LN_ERR_TO_VALUE(x)   (LN_PTR_TO_VALUE((x)) | ((ln_uint_t)(1) << (8 * sizeof(x) - 2)))
+#define LN_ERR_TO_VALUE(x)   ((x) | ((ln_uint_t)(3) << (8 * sizeof(x) - 2)))
 
 // warning: do not use
 #define LN_VALUE_TO_FLOAT(x) ((float)(LN_VALUE_TO_FIXED((x))) / (float)(1 << LN_FIXED_DOT)) 
@@ -128,11 +128,16 @@ enum {
 
 struct ln_word_t {
   uint8_t type;
-  ln_uint_t data;
+  
+  union {
+    ln_uint_t data;
+    uint32_t hash;
+  };
 };
 
 struct ln_entry_t {
-  ln_uint_t name, offset;
+  uint32_t name;
+  ln_uint_t offset;
 };
 
 struct ln_heap_t {
@@ -171,10 +176,7 @@ int  ln_digit(char chr);
 
 const char *ln_find_char(const char *str, char chr);
 
-int ln_equal(const char *str_1, const char *str_2);
-int ln_case_equal(const char *str_1, const char *str_2);
-
-ln_uint_t ln_hash(const char *text);
+uint32_t  ln_hash(const char *text);
 ln_uint_t ln_fixed(const char *text);
 
 void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t));
@@ -199,6 +201,7 @@ char      ln_read(int in_string);
 ln_word_t ln_take(void);
 ln_word_t ln_peek(void);
 int       ln_expect(ln_word_t *ptr, uint8_t type);
+int       ln_expect_multi(ln_word_t *ptr, const int *types);
 int       ln_expect_2(uint8_t type_1, uint8_t type_2);
 
 ln_int_t ln_multiply(ln_int_t x, ln_int_t y);

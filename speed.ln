@@ -1,10 +1,23 @@
+let value: 1
+
+func do_iter: begin
+  let value: value * 3
+  let value: value - 1
+end
+
 let time_start: get_time()
 
 let count: 100000
 
 while count > 0: begin
+  do_iter()
+  
+  if (value % 17) = 6: begin
+    let value: value + 8
+  end
+  
   let count: count - 1
 end
 
 let time_end: get_time()
-printf("[]\n", time_end - time_start);
+printf("value: []\ntime: []\n", value, time_end - time_start);

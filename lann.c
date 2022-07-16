@@ -35,59 +35,13 @@ int ln_digit(char chr) {
   return (chr >= '0' && chr <= '9');
 }
 
-const char *ln_find_char(const char *str, char chr) {
-  return strchr(str, chr);
-  
-  /*
-  while (*str) {
-    if (*str == chr) return str;
-    str++;
-  }
-  
-  return NULL;
-  */
-}
-
-int ln_equal(const char *str_1, const char *str_2) {
-  return !strcmp(str_1, str_2);
-  
-  /*
-  for (;;) {
-    if (*str_1 != *str_2) return 0;
-    if (!(*str_1) || !(*str_2)) return 1;
-    
-    str_1++, str_2++;
-  }
-  */
-}
-
-int ln_case_equal(const char *str_1, const char *str_2) {
-  return !strcmp(str_1, str_2);
-  
-  /*
-  for (;;) {
-    if (ln_upper(*str_1) != ln_upper(*str_2)) return 0;
-    if (!(*str_1) || !(*str_2)) return 1;
-    
-    str_1++, str_2++;
-  }
-  */
-}
-
-ln_uint_t ln_hash(const char *text) {
-  uint32_t hash = 0;
-  
-  const char *old_text = text;
+uint32_t ln_hash(const char *text) {
+  uint32_t hash = 0x811C9DC5;
   
   while (*text) {
-    hash += *(text++);
-    hash += hash << 10;
-    hash ^= hash >> 6;
+    hash ^= *(text++);
+    hash *= 0x01000193;
   }
-  
-  hash += hash << 3;
-  hash ^= hash >> 11;
-  hash += hash << 15;
   
   return hash;
 }
@@ -98,14 +52,14 @@ ln_uint_t ln_fixed(const char *text) {
   
   if (*text == '0') text++;
   
-  if (ln_upper(*text) == 'B') base = 2, text++;
-  else if (ln_upper(*text) == 'O') base = 8, text++;
-  else if (ln_upper(*text) == 'X') base = 16, text++;
+  if (*text == 'b') base = 2, text++;
+  else if (*text == 'o') base = 8, text++;
+  else if (*text == 'x') base = 16, text++;
   
   const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const char *ptr;
   
-  while (ptr = ln_find_char(digits, ln_upper(*text))) {
+  while (ptr = strchr(digits, ln_upper(*text))) {
     if (!(*ptr)) break;
     
     value = (value * base) + (ptr - digits);
@@ -119,7 +73,7 @@ ln_uint_t ln_fixed(const char *text) {
   
   int factor = base;
   
-  while (ptr = ln_find_char(digits, ln_upper(*text))) {
+  while (ptr = strchr(digits, ln_upper(*text))) {
     if (!(*ptr)) break;
     
     value += (((ln_uint_t)(1) << LN_FIXED_DOT) * (ptr - digits)) / factor;
@@ -334,7 +288,7 @@ ln_uint_t ln_cast(ln_uint_t value, int type) {
 }
 
 static int ln_space(char chr) {
-  return (chr && !(!ln_find_char(": \t\r\n", chr)));
+  return ((chr > 0 && chr <= 32) || chr == ':');
 }
 
 char ln_keep(int in_string) {
@@ -420,7 +374,7 @@ ln_word_t ln_take(void) {
           chr = ln_keep(in_string);
           const char *ptr;
           
-          if (!(ptr = ln_find_char(digits, chr))) break;
+          if (!(ptr = strchr(digits, chr))) break;
           if (chr == LN_CHAR_EOF) break;
           
           value = (value * 16) + (ptr - digits);
@@ -436,7 +390,7 @@ ln_word_t ln_take(void) {
           chr = ln_keep(in_string);
           const char *ptr;
           
-          if (!(ptr = ln_find_char(digits, chr))) break;
+          if (!(ptr = strchr(digits, chr))) break;
           
           value = (value * 8) + (ptr - digits);
           ln_skip(chr, in_string);
@@ -447,10 +401,6 @@ ln_word_t ln_take(void) {
         ln_data[ln_bump_offset++] = chr;
       }
       
-      continue;
-    }
-    
-    if (in_string && ln_find_char("\r\n", chr)) {
       continue;
     }
     
@@ -465,7 +415,7 @@ ln_word_t ln_take(void) {
       }
     }
     
-    if (!in_string && ln_find_char(",()+-*/%&|^!<=>", chr)) {
+    if (!in_string && (chr <= 45 || chr == '<' || chr == '=' || chr == '>' || chr == '^')) {
       if (ln_bump_offset - offset) {
         ln_code_offset--;
       } else {
@@ -488,84 +438,92 @@ ln_word_t ln_take(void) {
   }
   
   ln_bump_offset = offset;
-  ln_uint_t hash = ln_hash(token);
+  uint32_t hash = ln_hash(token);
   
-  if (!token[0]) {
-    return (ln_word_t){.type = ln_word_eof};
-  } else if (hash == 0x3ADB3357) {
+  if (hash == 0x77074BA4) {
     return (ln_word_t){.type = ln_word_null};
-  } else if (hash == 0xB2F35C25) {
+  } else if (hash == 0x4DB211E5) {
     return (ln_word_t){.type = ln_word_true};
-  } else if (hash == 0xFE25EF42) {
+  } else if (hash == 0x0B069958) {
     return (ln_word_t){.type = ln_word_false};
-  } else if (hash == 0xE433D77D) {
+  } else if (hash == 0xEB0CBD62) {
     return (ln_word_t){.type = ln_word_block};
-  } else if (hash == 0xB43529ED) {
+  } else if (hash == 0x68348A7E) {
     return (ln_word_t){.type = ln_word_begin};
-  } else if (hash == 0xB0C485D7) {
+  } else if (hash == 0x6A8E75AA) {
     return (ln_word_t){.type = ln_word_end};
-  } else if (hash == 0xFB4CC9FD) {
+  } else if (hash == 0x0E7E4807) {
     return (ln_word_t){.type = ln_word_func};
-  } else if (hash == 0x8FCDD7CA) {
+  } else if (hash == 0x506B03FA) {
     return (ln_word_t){.type = ln_word_let};
-  } else if (hash == 0xBEBC8707) {
+  } else if (hash == 0x39386E06) {
     return (ln_word_t){.type = ln_word_if};
-  } else if (hash == 0xA2F0E9D5) {
+  } else if (hash == 0xBDBF5BF0) {
     return (ln_word_t){.type = ln_word_else};
-  } else if (hash == 0x7BD097A8) {
+  } else if (hash == 0x8A58AD26) {
     return (ln_word_t){.type = ln_word_array};
-  } else if (hash == 0x75DE1D79) {
+  } else if (hash == 0x0DC628CE) {
     return (ln_word_t){.type = ln_word_while};
-  } else if (hash == 0x47B74C0E) {
+  } else if (hash == 0x994C2D1C) {
     return (ln_word_t){.type = ln_word_give};
-  } else if (hash == 0x632C8A8F) {
+  } else if (hash == 0xC9648178) {
     return (ln_word_t){.type = ln_word_break};
-  } else if (hash == 0xBB95F893) {
+  } else if (hash == 0x42F48402) {
     return (ln_word_t){.type = ln_word_ref};
-  } else if (hash == 0x5B2D1364) {
+  } else if (hash == 0x9D0AA73C) {
     return (ln_word_t){.type = ln_word_args};
-  } else if (hash == 0x8A2A4CA2) {
+  } else if (hash == 0x1BD670A0) {
     return (ln_word_t){.type = ln_word_type_number};
-  } else if (hash == 0x5D15D0DA) {
+  } else if (hash == 0xA35F792A) {
     return (ln_word_t){.type = ln_word_type_pointer};
-  } else if (hash == 0xC9206CAC) {
+  } else if (hash == 0x21918751) {
     return (ln_word_t){.type = ln_word_type_error};
-  } else if (hash == 0x52F4942A) {
+  } else if (hash == 0x7A278DE7) {
     return (ln_word_t){.type = ln_word_func_type_of};
-  } else if (hash == 0xF511C603) {
+  } else if (hash == 0x8AD5F6CC) {
     return (ln_word_t){.type = ln_word_func_size_of};
-  } else if (hash == 0x46EF16A5) {
+  } else if (hash == 0xFEA791E9) {
     return (ln_word_t){.type = ln_word_func_to_type};
-  } else if (hash == 0xBEB3226C) {
+  } else if (hash == 0x540CA757) {
     return (ln_word_t){.type = ln_word_func_get};
-  } else if (hash == 0x950781AF) {
+  } else if (hash == 0xC6270703) {
     return (ln_word_t){.type = ln_word_func_set};
-  } else if (hash == 0x797DF806) {
+  } else if (hash == 0xABB47DC7) {
     return (ln_word_t){.type = ln_word_func_mem_read};
-  } else if (hash == 0x539BED14) {
+  } else if (hash == 0x3BDB7886) {
     return (ln_word_t){.type = ln_word_func_mem_write};
-  } else if (hash == 0x90B7F7CD) {
+  } else if (hash == 0x65D1799A) {
     return (ln_word_t){.type = ln_word_func_mem_copy};
-  } else if (hash == 0x44B5FA2F) {
+  } else if (hash == 0x24EB1CFA) {
     return (ln_word_t){.type = ln_word_func_mem_move};
-  } else if (hash == 0x8920D764) {
+  } else if (hash == 0x925347E7) {
     return (ln_word_t){.type = ln_word_func_mem_test};
-  } else if (hash == 0x2F1DC72D) {
+  } else if (hash == 0x8490AE78) {
     return (ln_word_t){.type = ln_word_func_mem_alloc};
-  } else if (hash == 0xA9D2BEF2) {
+  } else if (hash == 0x894BE1D3) {
     return (ln_word_t){.type = ln_word_func_mem_realloc};
-  } else if (hash == 0x3F3A225D) {
+  } else if (hash == 0xB80435D9) {
     return (ln_word_t){.type = ln_word_func_mem_free};
-  } else if (hash == 0xF40BF840) {
+  } else if (hash == 0xAD17E81C) {
     return (ln_word_t){.type = ln_word_func_str_copy};
-  } else if (hash == 0xB054207A) {
+  } else if (hash == 0xD7A9BDBD) {
     return (ln_word_t){.type = ln_word_func_str_test};
-  } else if (hash == 0x0C6D9FCF) {
+  } else if (hash == 0x9720B814) {
     return (ln_word_t){.type = ln_word_func_str_size};
-  } else if (hash == 0xAFB47CA3) {
+  } else if (hash == 0x974B66AA) {
     return (ln_word_t){.type = ln_word_func_str_format};
-  } else if (hash == 0x5C4D6BEF) {
+  } else if (hash == 0x08D22E0F) {
     return (ln_word_t){.type = ln_word_func_eval};
+  } else if (hash == 0x0F29C2A6) {
+    return (ln_word_t){.type = ln_word_bool_and};
+  } else if (hash == 0x5D342984) {
+    return (ln_word_t){.type = ln_word_bool_or};
+  } else if (hash == 0xCC6BDB7E) {
+    return (ln_word_t){.type = ln_word_bool_xor};
+  }
+  
+  if (token[0] == '\0') {
+    return (ln_word_t){.type = ln_word_eof};
   } else if (token[0] == ',') {
     return (ln_word_t){.type = ln_word_comma};
   } else if (token[0] == '(') {
@@ -596,18 +554,14 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_bit_or};
   } else if (token[0] == '^') {
     return (ln_word_t){.type = ln_word_bit_xor};
-  } else if (hash == 0x6BEDA11E) {
-    return (ln_word_t){.type = ln_word_bool_and};
-  } else if (hash == 0xEF9461CA) {
-    return (ln_word_t){.type = ln_word_bool_or};
-  } else if (hash == 0x4D86273A) {
-    return (ln_word_t){.type = ln_word_bool_xor};
-  } else if (ln_digit(token[0])) {
+  }
+  
+  if (token[0] >= '0' && token[0] <= '9') {
     return (ln_word_t){.type = ln_word_number, .data = ln_fixed(token)};
   } else if (in_string && string_chr == '\'') {
     return (ln_word_t){.type = ln_word_number, .data = ((ln_uint_t)(token[0]) << LN_FIXED_DOT)};
   } else {
-    return (ln_word_t){.type = ln_word_name, .data = hash};
+    return (ln_word_t){.type = ln_word_name, .hash = hash};
   }
 }
 
@@ -640,6 +594,28 @@ int ln_expect(ln_word_t *ptr, uint8_t type) {
   
   if (ptr) *ptr = word;
   return 1;
+}
+
+int ln_expect_multi(ln_word_t *ptr, const int *types) {
+  ln_uint_t offset = ln_code_offset;
+  ln_word_t word = ln_take();
+  
+  while (*types) {
+    if (*types == word.type) {
+      if (ptr) *ptr = word;
+      return 1;
+    }
+    
+    types++;
+  }
+  
+  ln_last = word;
+  
+  ln_last_curr = offset;
+  ln_last_next = ln_code_offset;
+  
+  ln_code_offset = offset;
+  return 0;
 }
 
 int ln_expect_2(uint8_t type_1, uint8_t type_2) {
@@ -696,16 +672,16 @@ ln_int_t ln_divide(ln_int_t x, ln_int_t y) {
 
 ln_uint_t ln_eval_0(int exec) {
   if (ln_back || ln_break) exec = 0;
-  ln_word_t word;
+  ln_word_t word = ln_take();
   
-  if (ln_expect(&word, ln_word_number)) {
+  if (word.type == ln_word_number) {
     return word.data;
-  } else if (ln_expect(&word, ln_word_string)) {
+  } else if (word.type == ln_word_string) {
     if (exec) return LN_PTR_TO_VALUE(word.data);
     
     ln_bump_offset = word.data;
     return LN_NULL;
-  } else if (ln_expect(&word, ln_word_name)) {
+  } else if (word.type == ln_word_name) {
     if (ln_expect(NULL, ln_word_paren_left)) {
       ln_uint_t context_offset = ln_context_offset;
       ln_uint_t bump_offset = ln_bump_offset;
@@ -750,12 +726,12 @@ ln_uint_t ln_eval_0(int exec) {
       int handled = 0;
       
       if (ln_func_handle) {
-        handled = ln_func_handle(&value, word.data);
+        handled = ln_func_handle(&value, word.hash);
       }
       
       if (!handled) {
         for (int i = ln_context_offset - 1; i >= 0; i--) {
-          if (ln_context[i].name == word.data) {
+          if (ln_context[i].name == word.hash) {
             const char *old_code = ln_code;
             ln_uint_t old_offset = ln_code_offset;
             
@@ -793,7 +769,7 @@ ln_uint_t ln_eval_0(int exec) {
     } else {
       if (exec) {
         for (int i = ln_context_offset - 1; i >= 0; i--) {
-          if (ln_context[i].name == word.data) {
+          if (ln_context[i].name == word.hash) {
             return *((ln_uint_t *)(ln_data + ln_context[i].offset));
           }
         }
@@ -803,12 +779,12 @@ ln_uint_t ln_eval_0(int exec) {
         return LN_NULL;
       }
     }
-  } else if (ln_expect(NULL, ln_word_paren_left)) {
+  } else if (word.type == ln_word_paren_left) {
     ln_uint_t value = ln_eval_expr(exec);
     ln_expect(NULL, ln_word_paren_right);
     
     return value;
-  } else if (ln_expect(NULL, ln_word_block)) {
+  } else if (word.type == ln_word_block) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -823,9 +799,9 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return value;
-  } else if (ln_expect(NULL, ln_word_begin)) {
+  } else if (word.type == ln_word_begin) {
     return ln_eval(exec);
-  } else if (ln_expect(NULL, ln_word_let)) {
+  } else if (word.type == ln_word_let) {
     ln_expect(&word, ln_word_name);
     ln_uint_t value = ln_eval_expr(exec);
     
@@ -833,7 +809,7 @@ ln_uint_t ln_eval_0(int exec) {
       int found = 0;
       
       for (int i = ln_context_offset - 1; i >= 0; i--) {
-        if (ln_context[i].name == word.data) {
+        if (ln_context[i].name == word.hash) {
           *((ln_uint_t *)(ln_data + ln_context[i].offset)) = value;
           found = 1;
           
@@ -843,14 +819,14 @@ ln_uint_t ln_eval_0(int exec) {
       
       if (!found) {
         ln_context[ln_context_offset++] = (ln_entry_t){
-          .name = word.data,
+          .name = word.hash,
           .offset = ln_bump_value(value)
         };
       }
     }
     
     return value;
-  } else if (ln_expect(NULL, ln_word_func)) {
+  } else if (word.type == ln_word_func) {
     ln_expect(&word, ln_word_name);
     
     ln_uint_t code_start = ln_code_offset;
@@ -871,13 +847,13 @@ ln_uint_t ln_eval_0(int exec) {
       ln_data[ln_bump_offset++] = '\0';
       
       ln_context[ln_context_offset++] = (ln_entry_t){
-        .name = word.data,
+        .name = word.hash,
         .offset = ln_bump_value(LN_PTR_TO_VALUE(offset))
       };
     }
     
     return LN_PTR_TO_VALUE(offset);
-  } else if (ln_expect(NULL, ln_word_array)) {
+  } else if (word.type == ln_word_array) {
     ln_expect(&word, ln_word_name);
     
     ln_uint_t size = ln_eval_expr(exec);
@@ -896,9 +872,9 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_null)) {
+  } else if (word.type == ln_word_null) {
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_if)) {
+  } else if (word.type == ln_word_if) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -925,7 +901,7 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     return value;
-  } else if (ln_expect(NULL, ln_word_while)) {
+  } else if (word.type == ln_word_while) {
     ln_uint_t code_offset = ln_code_offset;
     ln_uint_t value = LN_NULL;
     
@@ -966,15 +942,15 @@ ln_uint_t ln_eval_0(int exec) {
     
     if (exec) ln_break = 0;
     return value;
-  } else if (ln_expect(NULL, ln_word_args)) {
+  } else if (word.type == ln_word_args) {
     return LN_PTR_TO_VALUE(ln_bump_args);
-  } else if (ln_expect(NULL, ln_word_type_number)) {
+  } else if (word.type == ln_word_type_number) {
     return LN_INT_TO_VALUE(ln_type_number);
-  } else if (ln_expect(NULL, ln_word_type_pointer)) {
+  } else if (word.type == ln_word_type_pointer) {
     return LN_INT_TO_VALUE(ln_type_pointer);
-  } else if (ln_expect(NULL, ln_word_type_error)) {
+  } else if (word.type == ln_word_type_error) {
     return LN_INT_TO_VALUE(ln_type_error);
-  } else if (ln_expect(NULL, ln_word_func_type_of)) {
+  } else if (word.type == ln_word_func_type_of) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -986,7 +962,7 @@ ln_uint_t ln_eval_0(int exec) {
     
     ln_expect(NULL, ln_word_paren_right);
     return LN_INT_TO_VALUE(LN_VALUE_TYPE(value));
-  } else if (ln_expect(NULL, ln_word_func_size_of)) {
+  } else if (word.type == ln_word_func_size_of) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -998,7 +974,7 @@ ln_uint_t ln_eval_0(int exec) {
     
     ln_expect(NULL, ln_word_paren_right);
     return LN_INT_TO_VALUE(sizeof(ln_uint_t));
-  } else if (ln_expect(NULL, ln_word_func_to_type)) {
+  } else if (word.type == ln_word_func_to_type) {
     ln_expect(NULL, ln_word_paren_left);
     
     ln_uint_t value = ln_eval_expr(exec);
@@ -1010,7 +986,7 @@ ln_uint_t ln_eval_0(int exec) {
     if (LN_VALUE_TYPE(type) != ln_type_number) return LN_INVALID_TYPE;
     
     return ln_cast(value, LN_VALUE_TO_INT(type));
-  } else if (ln_expect(NULL, ln_word_func_get)) {
+  } else if (word.type == ln_word_func_get) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1042,7 +1018,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_func_set)) {
+  } else if (word.type == ln_word_func_set) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1070,7 +1046,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return value;
-  } else if (ln_expect(NULL, ln_word_func_mem_read)) {
+  } else if (word.type == ln_word_func_mem_read) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1099,7 +1075,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_func_mem_write)) {
+  } else if (word.type == ln_word_func_mem_write) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1124,7 +1100,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return value;
-  } else if (ln_expect(NULL, ln_word_func_mem_copy)) {
+  } else if (word.type == ln_word_func_mem_copy) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1152,7 +1128,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return count;
-  } else if (ln_expect(NULL, ln_word_func_mem_move)) {
+  } else if (word.type == ln_word_func_mem_move) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1180,7 +1156,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return count;
-  } else if (ln_expect(NULL, ln_word_func_mem_test)) {
+  } else if (word.type == ln_word_func_mem_test) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1210,7 +1186,7 @@ ln_uint_t ln_eval_0(int exec) {
     
     if (exec) return LN_INT_TO_VALUE(equal);
     else return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_func_mem_alloc)) {
+  } else if (word.type == ln_word_func_mem_alloc) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1233,7 +1209,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return ptr;
-  } else if (ln_expect(NULL, ln_word_func_mem_realloc)) {
+  } else if (word.type == ln_word_func_mem_realloc) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1259,7 +1235,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return new_ptr;
-  } else if (ln_expect(NULL, ln_word_func_mem_free)) {
+  } else if (word.type == ln_word_func_mem_free) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1281,7 +1257,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_func_str_copy)) {
+  } else if (word.type == ln_word_func_str_copy) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1313,7 +1289,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset;
     
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_func_str_test)) {
+  } else if (word.type == ln_word_func_str_test) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1333,14 +1309,14 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     int equal = 0;
-    if (exec) equal = ln_equal(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2));
+    if (exec) equal = !strcmp(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2));
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
     
     if (exec) return LN_INT_TO_VALUE(equal);
     else return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_func_str_size)) {
+  } else if (word.type == ln_word_func_str_size) {
     ln_uint_t context_offset = ln_context_offset;
     ln_uint_t bump_offset = ln_bump_offset;
     
@@ -1358,7 +1334,7 @@ ln_uint_t ln_eval_0(int exec) {
     
     if (exec) return LN_INT_TO_VALUE(length);
     else return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_func_eval)) {
+  } else if (word.type == ln_word_func_eval) {
     ln_expect(NULL, ln_word_paren_left);
     
     ln_uint_t ptr = ln_eval_expr(exec);
@@ -1393,7 +1369,7 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_give)) {
+  } else if (word.type == ln_word_give) {
     ln_uint_t value = ln_eval_expr(exec);
     
     if (exec) {
@@ -1402,14 +1378,14 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_break)) {
+  } else if (word.type == ln_word_break) {
     if (exec) ln_break = 1;
     return LN_NULL;
-  } else if (ln_expect(NULL, ln_word_true)) {
+  } else if (word.type == ln_word_true) {
     return LN_INT_TO_VALUE(1);
-  } else if (ln_expect(NULL, ln_word_false)) {
+  } else if (word.type == ln_word_false) {
     return LN_INT_TO_VALUE(0);
-  } else if (ln_expect(NULL, ln_word_ref)) {
+  } else if (word.type == ln_word_ref) {
     ln_expect(&word, ln_word_name);
     
     if (exec) {
@@ -1423,7 +1399,7 @@ ln_uint_t ln_eval_0(int exec) {
     } else {
       return LN_NULL;
     }
-  } else if (ln_expect(NULL, ln_word_func_str_format)) {
+  } else if (word.type == ln_word_func_str_format) {
     ln_expect(NULL, ln_word_paren_left);
     
     ln_uint_t context_offset = ln_context_offset;
@@ -1516,13 +1492,16 @@ ln_uint_t ln_eval_0(int exec) {
 
 ln_uint_t ln_eval_1(int exec) {
   if (ln_back || ln_break) exec = 0;
+  ln_word_t word;
   
-  if (ln_expect(NULL, ln_word_minus)) {
-    ln_uint_t value = ln_eval_1(exec);
-    return LN_VALUE_NEGATE(value);
-  } else if (ln_expect(NULL, ln_word_exclam)) {
-    ln_uint_t value = ln_eval_1(exec);
-    return LN_INT_TO_VALUE(!LN_VALUE_TO_FIXED(value));
+  if (ln_expect_multi(&word, (const int[]){ln_word_minus, ln_word_exclam, 0})) {
+    if (word.type == ln_word_minus) {
+      ln_uint_t value = ln_eval_1(exec);
+      return LN_VALUE_NEGATE(value);
+    } else if (word.type == ln_word_exclam) {
+      ln_uint_t value = ln_eval_1(exec);
+      return LN_INT_TO_VALUE(!LN_VALUE_TO_FIXED(value));
+    }
   }
   
   return ln_eval_0(exec);
@@ -1537,7 +1516,7 @@ ln_uint_t ln_eval_2(int exec) {
   int type = LN_VALUE_TYPE(left);
   left = ln_cast(left, ln_type_number);
   
-  while (ln_expect(&word, ln_word_aster) || ln_expect(&word, ln_word_slash) || ln_expect(&word, ln_word_percent)) {
+  while (ln_expect_multi(&word, (const int[]){ln_word_aster, ln_word_slash, ln_word_percent, 0})) {
     ln_uint_t right = ln_cast(ln_eval_1(exec), ln_type_number);
     
     if (exec) {
@@ -1566,7 +1545,7 @@ ln_uint_t ln_eval_3(int exec) {
   int type = LN_VALUE_TYPE(left);
   left = ln_cast(left, ln_type_number);
   
-  while (ln_expect(&word, ln_word_plus) || ln_expect(&word, ln_word_minus)) {
+  while (ln_expect_multi(&word, (const int[]){ln_word_plus, ln_word_minus, 0})) {
     ln_uint_t right = ln_cast(ln_eval_2(exec), ln_type_number);
     
     if (exec) {
@@ -1583,19 +1562,21 @@ ln_uint_t ln_eval_3(int exec) {
 
 ln_uint_t ln_eval_4(int exec) {
   if (ln_back || ln_break) exec = 0;
+  
   ln_uint_t left = ln_eval_3(exec);
+  ln_word_t word;
   
   int type = LN_VALUE_TYPE(left);
   left = ln_cast(left, ln_type_number);
   
-  for (;;) {
-    if (ln_expect(NULL, ln_word_bit_and)) {
+  while (ln_expect_multi(&word, (const int[]){ln_word_bit_and, ln_word_bit_or, ln_word_bit_xor, 0})) {
+    if (word.type == ln_word_bit_and) {
       ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) & LN_VALUE_TO_FIXED(right));
-    } else if (ln_expect(NULL, ln_word_bit_or)) {
+    } else if (word.type == ln_word_bit_or) {
       ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) | LN_VALUE_TO_FIXED(right));
-    } else if (ln_expect(NULL, ln_word_bit_xor)) {
+    } else if (word.type == ln_word_bit_xor) {
       ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) ^ LN_VALUE_TO_FIXED(right));
     } else {
@@ -1639,16 +1620,18 @@ ln_uint_t ln_eval_5(int exec) {
 
 ln_uint_t ln_eval_6(int exec) {
   if (ln_back || ln_break) exec = 0;
-  ln_uint_t left = ln_eval_5(exec);
   
-  for (;;) {
-    if (ln_expect(NULL, ln_word_bool_and)) {
+  ln_uint_t left = ln_eval_5(exec);
+  ln_word_t word;
+  
+  while (ln_expect_multi(&word, (const int[]){ln_word_bool_and, ln_word_bool_or, ln_word_bool_xor, 0})) {
+    if (word.type == ln_word_bool_and) {
       ln_uint_t right = ln_eval_5(exec);
       left = LN_INT_TO_VALUE(LN_VALUE_TO_FIXED(left) && LN_VALUE_TO_FIXED(right));
-    } else if (ln_expect(NULL, ln_word_bool_or)) {
+    } else if (word.type == ln_word_bool_or) {
       ln_uint_t right = ln_eval_5(exec);
       left = LN_INT_TO_VALUE(LN_VALUE_TO_FIXED(left) || LN_VALUE_TO_FIXED(right));
-    } else if (ln_expect(NULL, ln_word_bool_xor)) {
+    } else if (word.type == ln_word_bool_xor) {
       ln_uint_t right = ln_eval_5(exec);
       left = LN_INT_TO_VALUE(!(!(LN_VALUE_TO_FIXED(left))) != !(!(LN_VALUE_TO_FIXED(right))));
     } else {
