@@ -1,9 +1,9 @@
-let count: 71
-let value: 100
+let count 71
+let value 100
 
-while count > 10: begin
-  let value: value * (count / (count + 10))
-  let count: count - 1
+while count > 10 begin
+  let value value * (count / (count + 10))
+  let count count - 1
 end
 
 printf("[]\n", value)

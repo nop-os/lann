@@ -171,11 +171,6 @@ extern ln_uint_t ln_words_total, ln_words_saved;
 
 extern const int ln_type_match[];
 
-char ln_upper(char chr);
-int  ln_digit(char chr);
-
-const char *ln_find_char(const char *str, char chr);
-
 uint32_t  ln_hash(const char *text);
 ln_uint_t ln_fixed(const char *text);
 

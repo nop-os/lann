@@ -1,0 +1,162 @@
+let global_start get_time()
+let bench_count 0
+
+while bench_count < 5 block begin
+  let time_start get_time()
+  
+  block begin
+    let value 1
+    
+    func do_iter begin
+      let value value * 3
+      let value value - 1
+    end
+    
+    let time_start get_time()
+    
+    let count 100000
+    
+    while count > 0 begin
+      do_iter()
+      
+      if (value % 17) = 6 begin
+        let value value + 8
+      end
+      
+      let count count - 1
+    end
+  end
+  
+  let time_end get_time()
+  
+  let bench_count bench_count + 1
+  printf("while ([]/5): []\n", bench_count, time_end - time_start)
+end
+
+let bench_count 0
+
+while bench_count < 5 block begin
+  let time_start get_time()
+  
+  block begin
+    let buffer null
+    let size 0
+    
+    let count 100000
+    
+    while count > 0 begin
+      let buffer mem_realloc(buffer, size + 1)
+      mem_write(buffer + size, count)
+      
+      let size size + 1
+      let count count - 1
+    end
+  end
+  
+  let time_end get_time()
+  
+  let bench_count bench_count + 1
+  printf("heap ([]/5): []\n", bench_count, time_end - time_start)
+end
+
+let bench_count 0
+
+while bench_count < 5 block begin
+  let time_start get_time()
+  
+  block begin
+    array primes 1000
+    let count 0
+    
+    let sieve mem_alloc(20000)
+    let index 0
+    
+    while index < 20000 begin
+      mem_write(sieve + index, 0)
+      let index index + 1
+    end
+    
+    let index 2
+    
+    while index < 1000 begin
+      if mem_read(sieve + index) = 0 begin
+        let sub_index index * index
+        
+        while sub_index < 20000 begin
+          mem_write(sieve + sub_index, 1)
+          let sub_index sub_index + index
+        end
+      end
+      
+      let index index + 1
+    end
+    
+    let index 2
+    
+    while index < 20000 begin
+      if mem_read(sieve + index) = 0 begin
+        set(primes, count, index)
+        let count count + 1
+      end
+      
+      let index index + 1
+    end
+  end
+  
+  let time_end get_time()
+  
+  let bench_count bench_count + 1
+  printf("sieve ([]/5): []\n", bench_count, time_end - time_start)
+end
+
+let bench_count 0
+
+while bench_count < 5 block begin
+  let time_start get_time()
+  
+  block begin
+    let a 1
+    let b 0
+    
+    let count 0
+    
+    while count < 100000 begin
+      let c a + b
+      
+      block str_format("[], [] -> []\n", b, a, c)
+      
+      let b a
+      let a c
+      
+      let count count + 1
+    end
+  end
+  
+  let time_end get_time()
+  
+  let bench_count bench_count + 1
+  printf("format ([]/5): []\n", bench_count, time_end - time_start)
+end
+
+let bench_count 0
+
+while bench_count < 5 block begin
+  let time_start get_time()
+  
+  block begin
+    let count 0
+    
+    while count < 100000 begin
+      let value count * (count + 1)
+      let count count + 1
+    end
+  end
+  
+  let time_end get_time()
+  
+  let bench_count bench_count + 1
+  printf("multiply ([]/5): []\n", bench_count, time_end - time_start)
+end
+
+let global_end get_time()
+printf("[]\n", global_end - global_start)

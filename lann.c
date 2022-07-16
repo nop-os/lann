@@ -26,13 +26,9 @@ ln_uint_t ln_words_total = 0, ln_words_saved = 0;
 
 const int ln_type_match[4] = {ln_type_number, ln_type_number, ln_type_pointer, ln_type_error};
 
-char ln_upper(char chr) {
+static inline char ln_upper(char chr) {
   if (chr >= 'a' && chr <= 'z') return (chr - 'a') + 'A';
   return chr;
-}
-
-int ln_digit(char chr) {
-  return (chr >= '0' && chr <= '9');
 }
 
 uint32_t ln_hash(const char *text) {
@@ -287,31 +283,34 @@ ln_uint_t ln_cast(ln_uint_t value, int type) {
   return LN_NULL;
 }
 
-static int ln_space(char chr) {
-  return ((chr > 0 && chr <= 32) || chr == ':');
+static inline int ln_space(char chr) {
+  return (chr && chr <= 32);
 }
 
 char ln_keep(int in_string) {
+  char chr = ln_code[ln_code_offset];
+  if (!chr) return LN_CHAR_EOF;
+  
   if (!in_string) {
     int is_delim = 0;
     
     for (;;) {
-      if (ln_code[ln_code_offset] == '#') {
+      if (chr == '#') {
         while (ln_code[ln_code_offset] && ln_code[ln_code_offset] != '\n') ln_code_offset++;
-        is_delim = 1;
-      } else if (ln_space(ln_code[ln_code_offset])) {
+      } else if (ln_space(chr)) {
         ln_code_offset++;
-        is_delim = 1;
       } else {
         break;
       }
+      
+      chr = ln_code[ln_code_offset];
+      is_delim = 1;
     }
     
     if (is_delim) return LN_CHAR_DELIM;
   }
   
-  if (!ln_code[ln_code_offset]) return LN_CHAR_EOF;
-  return ln_code[ln_code_offset];
+  return chr;
 }
 
 void ln_skip(char chr, int in_string) {
@@ -1513,11 +1512,8 @@ ln_uint_t ln_eval_2(int exec) {
   ln_uint_t left = ln_eval_1(exec);
   ln_word_t word;
   
-  int type = LN_VALUE_TYPE(left);
-  left = ln_cast(left, ln_type_number);
-  
   while (ln_expect_multi(&word, (const int[]){ln_word_aster, ln_word_slash, ln_word_percent, 0})) {
-    ln_uint_t right = ln_cast(ln_eval_1(exec), ln_type_number);
+    ln_uint_t right = ln_eval_1(exec);
     
     if (exec) {
       if (word.type == ln_word_aster) {
@@ -1533,7 +1529,7 @@ ln_uint_t ln_eval_2(int exec) {
     }
   }
   
-  return ln_cast(left, type);
+  return left;
 }
 
 ln_uint_t ln_eval_3(int exec) {
@@ -1566,30 +1562,29 @@ ln_uint_t ln_eval_4(int exec) {
   ln_uint_t left = ln_eval_3(exec);
   ln_word_t word;
   
-  int type = LN_VALUE_TYPE(left);
-  left = ln_cast(left, ln_type_number);
-  
   while (ln_expect_multi(&word, (const int[]){ln_word_bit_and, ln_word_bit_or, ln_word_bit_xor, 0})) {
     if (word.type == ln_word_bit_and) {
-      ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
+      ln_uint_t right = ln_eval_3(exec);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) & LN_VALUE_TO_FIXED(right));
     } else if (word.type == ln_word_bit_or) {
-      ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
+      ln_uint_t right = ln_eval_3(exec);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) | LN_VALUE_TO_FIXED(right));
     } else if (word.type == ln_word_bit_xor) {
-      ln_uint_t right = ln_cast(ln_eval_3(exec), ln_type_number);
+      ln_uint_t right = ln_eval_3(exec);
       left = LN_FIXED_TO_VALUE(LN_VALUE_TO_FIXED(left) ^ LN_VALUE_TO_FIXED(right));
     } else {
       break;
     }
   }
   
-  return ln_cast(left, type);
+  return left;
 }
 
 ln_uint_t ln_eval_5(int exec) {
   if (ln_back || ln_break) exec = 0;
   ln_uint_t left = ln_eval_4(exec);
+  
+  ln_word_t word;
   
   for (;;) {
     if (ln_expect(NULL, ln_word_equal)) {
