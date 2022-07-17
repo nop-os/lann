@@ -269,6 +269,8 @@ ln_uint_t ln_cast(ln_uint_t value, int type) {
   int old_type = LN_VALUE_TYPE(value);
   if (old_type == type) return value;
   
+  if ((unsigned int)(type) > ln_type_error) return LN_INVALID_TYPE;
+  
   if (old_type == ln_type_number) {
     if (type == ln_type_pointer) return LN_PTR_TO_VALUE((ln_uint_t)(LN_VALUE_TO_INT(value)));
     else if (type == ln_type_error) return LN_ERR_TO_VALUE((ln_uint_t)(LN_VALUE_TO_INT(value)));
