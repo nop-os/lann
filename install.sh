@@ -9,9 +9,9 @@ echo "[lann] creating lann directories /usr/share/lann and /usr/bin..."
 mkdir -p /usr/share/lann /usr/bin
 
 echo "[lann] copying executable to /usr/bin..."
-cp lann /usr/bin/
+cp build/lann /usr/bin/
 
 echo "[lann] copying repl.ln to /usr/share/lann..."
-cp repl.ln /usr/share/lann/
+cp build/repl.ln /usr/share/lann/
 
 echo "[lann] done!"
