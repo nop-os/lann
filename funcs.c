@@ -66,11 +66,11 @@ void print_value(ln_uint_t value, int result) {
   }
 }
 
-static void printf_lann(void) {
+static ln_uint_t printf_lann(void) {
   int index = 0;
   
   ln_uint_t value = ln_get_arg(index++);
-  if (LN_VALUE_TYPE(value) != ln_type_pointer) return;
+  if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
   const char *format = ln_data + LN_VALUE_TO_PTR(value);
   
@@ -90,28 +90,34 @@ static void printf_lann(void) {
   #ifndef __NOP__
   fflush(stdout);
   #endif
+  
+  return LN_NULL;
 }
 
-static void put_text_lann(void) {
+static ln_uint_t put_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
-  if (LN_VALUE_TYPE(value) != ln_type_pointer) return;
+  if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
   putstr(ln_data + LN_VALUE_TO_PTR(value));
   
   #ifndef __NOP__
   fflush(stdout);
   #endif
+  
+  return LN_NULL;
 }
 
-static void put_char_lann(void) {
+static ln_uint_t put_char_lann(void) {
   ln_uint_t value = ln_get_arg(0);
-  if (LN_VALUE_TYPE(value) != ln_type_number) return;
+  if (LN_VALUE_TYPE(value) != ln_type_number) return LN_INVALID_TYPE;
   
   putchar(LN_VALUE_TO_INT(value));
   
   #ifndef __NOP__
   fflush(stdout);
   #endif
+  
+  return LN_NULL;
 }
 
 static ln_uint_t get_text_lann(void) {
@@ -146,9 +152,9 @@ static ln_uint_t get_char_lann(void) {
   return LN_INT_TO_VALUE(chr);
 }
 
-static void raw_mode_lann(void) {
+static ln_uint_t raw_mode_lann(void) {
   ln_uint_t value = ln_get_arg(0);
-  if (LN_VALUE_TYPE(value) != ln_type_number) return;
+  if (LN_VALUE_TYPE(value) != ln_type_number) return LN_INVALID_TYPE;
   
   #ifdef __NOP__
   static int old_mode;
@@ -178,6 +184,8 @@ static void raw_mode_lann(void) {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_termios);
   }
   #endif
+  
+  return LN_NULL;
 }
 
 static ln_uint_t get_term_lann(void) {
@@ -251,19 +259,13 @@ int repl_handle(ln_uint_t *value, ln_uint_t hash) {
   if (!hash_done) do_hash();
   
   if (hash == hash_table[0]) {
-    printf_lann();
-    
-    *value = LN_NULL;
+    *value = printf_lann();
     return 1;
   } else if (hash == hash_table[1]) {
-    put_text_lann();
-    
-    *value = LN_NULL;
+    *value = put_text_lann();
     return 1;
   } else if (hash == hash_table[2]) {
-    put_char_lann();
-    
-    *value = LN_NULL;
+    *value = put_char_lann();
     return 1;
   } else if (hash == hash_table[3]) {
     *value = get_text_lann();
@@ -272,9 +274,7 @@ int repl_handle(ln_uint_t *value, ln_uint_t hash) {
     *value = get_char_lann();
     return 1;
   } else if (hash == hash_table[5]) {
-    raw_mode_lann();
-    
-    *value = LN_NULL;
+    *value = raw_mode_lann();
     return 1;
   } else if (hash == hash_table[6]) {
     *value = get_term_lann();
@@ -293,6 +293,11 @@ int repl_handle(ln_uint_t *value, ln_uint_t hash) {
     *value = LN_NULL;
     return 1;
   } else if (hash == hash_table[9]) {
+    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_number) {
+      *value = LN_INVALID_TYPE;
+      return 1;
+    }
+    
     exit(LN_VALUE_TO_INT(ln_get_arg(0)));
     return 1;
   } else if (hash == hash_table[10]) {
