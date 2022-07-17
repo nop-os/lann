@@ -67,8 +67,7 @@ You can check `main.c` inside the `lann` folder for reference.
 ## To-Do list
 
 - Implement a fixed-point division algorithm instead of approximating it.
-- Use strncpy and strncmp in str_copy and str_test to avoid OOB accesses.
-- Check out of bounds strings properly instead of just the first byte.
+- Check OOBs properly in allocated memory regions.
 
 ## Licensing
 

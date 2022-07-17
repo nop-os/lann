@@ -188,6 +188,7 @@ extern const int ln_type_match[];
 
 int ln_check_heap(ln_uint_t offset);
 int ln_check(ln_uint_t offset, ln_uint_t size);
+int ln_check_string(ln_uint_t offset);
 
 uint32_t  ln_hash(const char *text);
 ln_uint_t ln_fixed(const char *text);

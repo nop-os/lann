@@ -59,6 +59,5 @@ int main(int argc, const char **argv) {
   if (ln_back) value = ln_return;
   
   free(code);
-  
   return LN_VALUE_TO_INT(value);
 }

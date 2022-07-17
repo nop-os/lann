@@ -55,6 +55,17 @@ int ln_check(ln_uint_t offset, ln_uint_t size) {
   return 1;
 }
 
+int ln_check_string(ln_uint_t offset) {
+  for (;;) {
+    if (!ln_check(offset, 1)) return 0;
+    if (!ln_data[offset]) break;
+    
+    offset++;
+  }
+  
+  return 1;
+}
+
 uint32_t ln_hash(const char *text) {
   uint32_t hash = 0x811C9DC5;
   
@@ -795,7 +806,7 @@ ln_uint_t ln_eval_0(int exec) {
           if (ln_context[i].name == word.hash) {
             ln_uint_t offset = LN_VALUE_TO_PTR(*((ln_uint_t *)(ln_data + ln_context[i].offset)));
             
-            if (!ln_check(offset, 1)) {
+            if (!ln_check_string(offset)) {
               value = LN_OUT_OF_BOUNDS;
               break;
             }
@@ -1424,7 +1435,16 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     if (exec) {
-      if (!ln_check(LN_VALUE_TO_PTR(ptr_1), 1) || !ln_check(LN_VALUE_TO_PTR(ptr_2), 1)) {
+      if (!ln_check_string(LN_VALUE_TO_PTR(ptr_2))) {
+        ln_context_offset = context_offset;
+        ln_bump_offset = bump_offset;
+        
+        return LN_OUT_OF_BOUNDS;
+      }
+      
+      size_t length = strlen(ln_data + LN_VALUE_TO_PTR(ptr_2));
+      
+      if (!ln_check(LN_VALUE_TO_PTR(ptr_1), length + 1)) {
         ln_context_offset = context_offset;
         ln_bump_offset = bump_offset;
         
@@ -1465,7 +1485,7 @@ ln_uint_t ln_eval_0(int exec) {
     int equal = 0;
     
     if (exec) {
-      if (!ln_check(LN_VALUE_TO_PTR(ptr_1), 1) || !ln_check(LN_VALUE_TO_PTR(ptr_2), 1)) {
+      if (!ln_check_string(LN_VALUE_TO_PTR(ptr_1)) || !ln_check_string(LN_VALUE_TO_PTR(ptr_2))) {
         ln_context_offset = context_offset;
         ln_bump_offset = bump_offset;
         
@@ -1491,7 +1511,7 @@ ln_uint_t ln_eval_0(int exec) {
     
     if (LN_VALUE_TYPE(ptr) != ln_type_pointer) return LN_INVALID_TYPE;
     
-    if (!ln_check(LN_VALUE_TO_PTR(ptr), 1)) {
+    if (!ln_check_string(LN_VALUE_TO_PTR(ptr))) {
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
       
@@ -1521,7 +1541,7 @@ ln_uint_t ln_eval_0(int exec) {
       ln_uint_t old_last_curr = ln_last_curr;
       ln_uint_t old_last_next = ln_last_next;
       
-      if (!ln_check(LN_VALUE_TO_PTR(ptr), 1)) {
+      if (!ln_check_string(LN_VALUE_TO_PTR(ptr))) {
         return LN_OUT_OF_BOUNDS;
       }
       
@@ -1561,7 +1581,7 @@ ln_uint_t ln_eval_0(int exec) {
       ln_uint_t old_last_curr = ln_last_curr;
       ln_uint_t old_last_next = ln_last_next;
       
-      if (!ln_check(LN_VALUE_TO_PTR(ptr), 1)) {
+      if (!ln_check_string(LN_VALUE_TO_PTR(ptr))) {
         return LN_OUT_OF_BOUNDS;
       }
       
