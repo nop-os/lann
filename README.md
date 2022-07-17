@@ -1,6 +1,6 @@
 # lann
 
-![lann's logo](/lann.png)
+<img align="left" width="140" height="140" src="https://raw.githubusercontent.com/nop-os/lann/master/lann.png">
 
 lann is an embeddable, dynamically typed programming language that focuses on
 its ease of use and simplicity, while minimizing RAM usage to a bare minimum.
