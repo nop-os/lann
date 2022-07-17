@@ -3,6 +3,7 @@
 #include <lann.h>
 
 int (*ln_func_handle)(ln_uint_t *, ln_uint_t) = NULL;
+int (*ln_import_handle)(ln_uint_t *, const char *) = NULL;
 
 uint8_t *ln_data = NULL;
 ln_uint_t ln_bump_size = 0, ln_bump_offset = 0, ln_bump_args = 0;
@@ -102,7 +103,7 @@ ln_uint_t ln_fixed(const char *text) {
   return value;
 }
 
-void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t)) {
+void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t), int (*import_handle)(ln_uint_t *, const char *)) {
   ln_bump_size =    (4  * size) / 16;
   ln_context_size = (1  * size) / 16;
   ln_heap_size =    (11 * size) / 16;
@@ -111,6 +112,7 @@ void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_ui
   ln_data = buffer + ln_context_size;
   
   ln_func_handle = func_handle;
+  ln_import_handle = import_handle;
   
   ln_heap_t *block = (ln_heap_t *)(ln_data + ln_bump_size);
   
@@ -545,6 +547,8 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_func_str_format};
   } else if (hash == 0x08D22E0F) {
     return (ln_word_t){.type = ln_word_func_eval};
+  } else if (hash == 0x112A90D4) {
+    return (ln_word_t){.type = ln_word_func_import};
   } else if (hash == 0x0F29C2A6) {
     return (ln_word_t){.type = ln_word_bool_and};
   } else if (hash == 0x5D342984) {
@@ -1502,6 +1506,52 @@ ln_uint_t ln_eval_0(int exec) {
       ln_last_next = 0;
       
       ln_uint_t value = ln_eval(1);
+      
+      ln_code = old_code;
+      ln_code_offset = old_offset;
+      
+      ln_last = old_last;
+      ln_last_curr = old_last_curr;
+      ln_last_next = old_last_next;
+      
+      return value;
+    }
+    
+    return LN_NULL;
+  } else if (word.type == ln_word_func_import) {
+    ln_expect(NULL, ln_word_paren_left);
+    
+    ln_uint_t ptr = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_paren_right);
+    
+    if (!ln_import_handle) return LN_NULL;
+    if (LN_VALUE_TYPE(ptr) != ln_type_pointer) return LN_INVALID_TYPE;
+    
+    if (exec) {
+      const char *old_code = ln_code;
+      ln_uint_t old_offset = ln_code_offset;
+      
+      ln_word_t old_last = ln_last;
+      ln_uint_t old_last_curr = ln_last_curr;
+      ln_uint_t old_last_next = ln_last_next;
+      
+      if (!ln_check(LN_VALUE_TO_PTR(ptr), 1)) {
+        return LN_OUT_OF_BOUNDS;
+      }
+      
+      size_t length = strlen(ln_data + LN_VALUE_TO_PTR(ptr));
+      ln_uint_t value = LN_NULL;
+      
+      char path[length + strlen(LN_PATH) + 4];
+      
+      strcpy(path, LN_PATH);
+      strcat(path, ln_data + LN_VALUE_TO_PTR(ptr));
+      strcat(path, ".ln");
+      
+      if (!ln_import_handle(&value, path)) {
+        strcpy(path, ln_data + LN_VALUE_TO_PTR(ptr));
+        ln_import_handle(&value, path);
+      }
       
       ln_code = old_code;
       ln_code_offset = old_offset;

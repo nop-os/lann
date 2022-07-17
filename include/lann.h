@@ -15,6 +15,10 @@
 #define LN_FIXED_DOT 28
 #endif
 
+#ifndef LN_PATH
+#define LN_PATH "/usr/share/lann/"
+#endif
+
 #define LN_CHAR_DELIM ' '
 #define LN_CHAR_EOF   '\0'
 
@@ -98,6 +102,7 @@ enum {
   ln_word_func_str_size,
   ln_word_func_str_format,
   ln_word_func_eval,
+  ln_word_func_import,
   
   ln_word_comma,
   ln_word_paren_left,
@@ -149,6 +154,7 @@ struct ln_heap_t {
 };
 
 extern int (*ln_func_handle)(ln_uint_t *, ln_uint_t);
+extern int (*ln_import_handle)(ln_uint_t *, const char *);
 
 extern uint8_t *ln_data;
 extern ln_uint_t ln_bump_size, ln_bump_offset, ln_bump_args;
@@ -178,7 +184,7 @@ int ln_check(ln_uint_t offset, ln_uint_t size);
 uint32_t  ln_hash(const char *text);
 ln_uint_t ln_fixed(const char *text);
 
-void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t));
+void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t), int (*import_handle)(ln_uint_t *, const char *));
 
 void      ln_heap_init(void);
 void      ln_heap_defrag(void);

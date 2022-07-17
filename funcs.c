@@ -264,7 +264,7 @@ static void do_hash(void) {
   hash_done = 1;
 }
 
-int repl_handle(ln_uint_t *value, ln_uint_t hash) {
+int func_handle(ln_uint_t *value, ln_uint_t hash) {
   if (!hash_done) do_hash();
   
   if (hash == hash_table[0]) {
@@ -405,4 +405,30 @@ int repl_handle(ln_uint_t *value, ln_uint_t hash) {
   }
   
   return 0;
+}
+
+int import_handle(ln_uint_t *value, const char *path) {
+  FILE *file = fopen(path, "r");
+  if (!file) return 0;
+  
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  
+  char *code = calloc(size + 1, 1);
+  
+  rewind(file);
+  fread(code, 1, size, file);
+  
+  fclose(file);
+  
+  ln_code = code;
+  ln_code_offset = 0;
+  
+  ln_last_curr = 0;
+  ln_last_next = 0;
+  
+  *value = ln_eval(1);
+  free(code);
+  
+  return 1;
 }

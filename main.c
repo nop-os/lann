@@ -4,13 +4,16 @@
 #include <stdio.h>
 #include <lann.h>
 
-extern int repl_handle(ln_uint_t *value, ln_uint_t hash);
+extern int func_handle(ln_uint_t *value, ln_uint_t hash);
+extern int import_handle(ln_uint_t *value, const char *path);
 
 int main(int argc, const char **argv) {
   ln_uint_t mem_size = 1048576;
-  ln_init(malloc(mem_size), mem_size, repl_handle);
+  ln_init(malloc(mem_size), mem_size, func_handle, import_handle);
   
-  const char *path = "repl.ln";
+  const char *path = "/usr/share/lann/repl.ln";
+  if (strcmp(argv[0], "lann")) path = "repl.ln";
+  
   if (argc >= 2) path = argv[1];
   
   int count = argc - 2;
