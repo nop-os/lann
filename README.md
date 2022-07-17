@@ -18,8 +18,6 @@ to modern Linux computers.
 - Function built-ins kept to a minimum and selectable, even printf is optional.
 - Support for package installation to `/usr/share/lann` or equivalent.
 
-Note that a package manager written in lann is in the works too.
-
 ## Example
 
 ```lann
