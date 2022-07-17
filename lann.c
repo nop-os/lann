@@ -276,8 +276,17 @@ ln_uint_t ln_cast(ln_uint_t value, int type) {
     if (type == ln_type_number) return LN_INT_TO_VALUE(LN_VALUE_TO_PTR(value));
     else if (type == ln_type_error) LN_ERR_TO_VALUE(LN_VALUE_TO_PTR(value));
   } else if (old_type == ln_type_error) {
-    if (type == ln_type_number) return LN_INT_TO_VALUE(LN_VALUE_TO_ERR(value));
-    else if (type == ln_type_pointer) LN_PTR_TO_VALUE(LN_VALUE_TO_ERR(value));
+    if (type == ln_type_number) {
+      ln_uint_t error = LN_VALUE_TO_ERR(value);
+      
+      if (error >> (8 * sizeof(error) - 3)) {
+        error |= ((ln_uint_t)(3) << (8 * sizeof(error) - 2));
+      }
+      
+      return LN_INT_TO_VALUE((ln_int_t)(error));
+    } else if (type == ln_type_pointer) {
+      LN_PTR_TO_VALUE(LN_VALUE_TO_ERR(value));
+    }
   }
   
   return LN_NULL;
@@ -1539,9 +1548,14 @@ ln_uint_t ln_eval_3(int exec) {
   ln_word_t word;
   
   int type = LN_VALUE_TYPE(left);
-  left = ln_cast(left, ln_type_number);
+  int do_cast = 0;
   
   while (ln_expect_multi(&word, (const int[]){ln_word_plus, ln_word_minus, 0})) {
+    if (!do_cast) {
+      left = ln_cast(left, ln_type_number);
+      do_cast = 1;
+    }
+    
     ln_uint_t right = ln_cast(ln_eval_2(exec), ln_type_number);
     
     if (exec) {
@@ -1553,7 +1567,8 @@ ln_uint_t ln_eval_3(int exec) {
     }
   }
   
-  return ln_cast(left, type);
+  if (do_cast) return ln_cast(left, type);
+  return left;
 }
 
 ln_uint_t ln_eval_4(int exec) {

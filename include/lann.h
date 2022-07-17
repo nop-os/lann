@@ -24,7 +24,7 @@
 #define LN_VALUE_ABS(x)      (LN_FIXED_TO_VALUE(LN_FIXED_ABS(LN_VALUE_TO_FIXED((x)))))
 #define LN_VALUE_TO_RAW(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 1)) - 1))
 #define LN_VALUE_TO_FIXED(x) ((ln_int_t)((x) | (LN_VALUE_SIGN((x)) << (8 * sizeof(x) - 1))))
-#define LN_VALUE_TO_INT(x)   (LN_VALUE_TO_FIXED((x)) / ((ln_uint_t)(1) << LN_FIXED_DOT))
+#define LN_VALUE_TO_INT(x)   (LN_VALUE_TO_FIXED((x)) / ((ln_int_t)(1) << LN_FIXED_DOT))
 #define LN_FIXED_SIGN(x)     ((ln_uint_t)((x)) >> (8 * sizeof(x) - 1))
 #define LN_FIXED_ABS(x)      (LN_FIXED_SIGN((x)) ? -(x) : (x))
 #define LN_VALUE_NEGATE(x)   (LN_FIXED_TO_VALUE(-LN_VALUE_TO_FIXED((x))))
