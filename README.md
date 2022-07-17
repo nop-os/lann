@@ -18,25 +18,25 @@ Note that currently lann is a project fully maintained by a single person, so sl
 ## Example
 
 ```lann
-let count: 0
+let count 0
 
-while count < 100: begin
+while count < 100 begin
   printf("[]\n", count)
-  let count: count + 1
+  let count count + 1
 end
 
-array test: 6
+array test 6
 str_copy(test, "world")
 
 printf("hello, []!\n", test)
 
-func pow: block begin
-  let base: get(args, 0)
-  let exp: get(args, 1)
+func pow block begin
+  let base get(args, 0)
+  let exp get(args, 1)
   
-  if exp = 0: give 1
-  else if exp < 0: give 1 / pow(base, -exp)
-  else: give pow(base, exp - 1) * base
+  if exp = 0 give 1
+  else if exp < 0 give 1 / pow(base, -exp)
+  else give pow(base, exp - 1) * base
 end
 
 printf("2 ** 14 = []\n", pow(2, 14))
