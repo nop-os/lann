@@ -41,18 +41,15 @@ static void print_fixed(ln_uint_t fixed, int first) {
   }
 }
 
-void print_value(ln_uint_t value, int result) {
+void print_value(ln_uint_t value) {
   int type = LN_VALUE_TYPE(value);
   
   if (type == ln_type_number) {
     if (LN_VALUE_SIGN(value)) putchar('-');
     print_fixed(LN_FIXED_ABS(LN_VALUE_TO_FIXED(value)), 1);
   } else if (type == ln_type_pointer) {
-    if (result) {
-      printf("\"%s\"", ln_data + LN_VALUE_TO_PTR(value));
-    } else {
-      putstr(ln_data + LN_VALUE_TO_PTR(value));
-    }
+    if (ln_check(LN_VALUE_TO_PTR(value), 1)) putstr(ln_data + LN_VALUE_TO_PTR(value));
+    else printf("[pointer %u]", LN_VALUE_TO_PTR(value));
   } else if (value == LN_NULL) {
     putstr("[null]");
   } else if (value == LN_UNDEFINED) {
@@ -61,6 +58,8 @@ void print_value(ln_uint_t value, int result) {
     putstr("[divide by zero]");
   } else if (value == LN_INVALID_TYPE) {
     putstr("[invalid type]");
+  } else if (value == LN_OUT_OF_BOUNDS) {
+    putstr("[out of bounds]");
   } else {
     printf("[error %u]", LN_VALUE_TO_ERR(value));
   }
@@ -75,11 +74,15 @@ static ln_uint_t printf_lann(void) {
   const char *format = ln_data + LN_VALUE_TO_PTR(value);
   
   while (*format) {
+    if (!ln_check((ln_uint_t)((void *)(format) - (void *)(ln_data)), 1)) return LN_OUT_OF_BOUNDS;
+    
     if (*format == '[') {
       format++;
       
+      if (!ln_check((ln_uint_t)((void *)(format) - (void *)(ln_data)), 1)) return LN_OUT_OF_BOUNDS;
+      
       if (*format == '[') putchar('[');
-      else print_value(ln_get_arg(index++), 0);
+      else print_value(ln_get_arg(index++));
     } else {
       putchar(*format);
     }
@@ -98,6 +101,7 @@ static ln_uint_t put_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
+  if (!ln_check(LN_VALUE_TO_PTR(value), 1)) return LN_OUT_OF_BOUNDS;
   putstr(ln_data + LN_VALUE_TO_PTR(value));
   
   #ifndef __NOP__
@@ -123,6 +127,8 @@ static ln_uint_t put_char_lann(void) {
 static ln_uint_t get_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
+  
+  if (!ln_check(LN_VALUE_TO_PTR(value), 1)) return LN_OUT_OF_BOUNDS;
   
   #ifdef __NOP__
   gets_s(ln_data + LN_VALUE_TO_PTR(value), ln_bump_size);
@@ -191,6 +197,9 @@ static ln_uint_t raw_mode_lann(void) {
 static ln_uint_t get_term_lann(void) {
   ln_uint_t ptr_1 = ln_get_arg(0), ptr_2 = ln_get_arg(1);
   if (LN_VALUE_TYPE(ptr_1) != ln_type_pointer || LN_VALUE_TYPE(ptr_2) != ln_type_pointer) return LN_INVALID_TYPE;
+  
+  if (!ln_check(LN_VALUE_TO_PTR(ptr_1), sizeof(ln_uint_t))) return LN_OUT_OF_BOUNDS;
+  if (!ln_check(LN_VALUE_TO_PTR(ptr_2), sizeof(ln_uint_t))) return LN_OUT_OF_BOUNDS;
   
   #ifdef __NOP__
   // TODO
@@ -339,7 +348,16 @@ int repl_handle(ln_uint_t *value, ln_uint_t hash) {
     size_t size = ftell(file);
     
     rewind(file);
+    
+    if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(1)), size)) {
+      fclose(file);
+      
+      *value = LN_OUT_OF_BOUNDS;
+      return 1;
+    }
+    
     size_t total = fread(ln_data + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
+    fclose(file);
     
     *value = LN_INT_TO_VALUE(total);
     return 1;
@@ -358,13 +376,27 @@ int repl_handle(ln_uint_t *value, ln_uint_t hash) {
     }
     
     size_t size = (size_t)(LN_VALUE_TO_INT(ln_get_arg(2)));
+    
+    if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(1)), size)) {
+      fclose(file);
+      
+      *value = LN_OUT_OF_BOUNDS;
+      return 1;
+    }
+    
     size_t total = fwrite(ln_data + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
+    fclose(file);
     
     *value = LN_INT_TO_VALUE(total);
     return 1;
   } else if (hash == hash_table[13]) {
     if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer) {
       *value = LN_INVALID_TYPE;
+      return 1;
+    }
+    
+    if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(0)), 1)) {
+      *value = LN_OUT_OF_BOUNDS;
       return 1;
     }
     

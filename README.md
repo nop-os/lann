@@ -63,7 +63,8 @@ Embedding lann into an existing project is as easy as copying the source and hea
 Here are some things you can help with (if you want, of course):
 
 - Make division work with bigger numbers (and without using floats).
-- Add bound checks to everything pointer-related.
+- Use strncpy and strncmp in str_copy and str_test so we don't get out of bounds accesses.
+- Check out of bounds strings properly instead of just the first byte.
 - Macros with macro-end blocks.
 
 ## Licensing

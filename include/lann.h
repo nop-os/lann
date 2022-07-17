@@ -43,6 +43,7 @@
 #define LN_UNDEFINED      (LN_ERR_TO_VALUE((ln_uint_t)(-2)))
 #define LN_DIVIDE_BY_ZERO (LN_ERR_TO_VALUE((ln_uint_t)(-3)))
 #define LN_INVALID_TYPE   (LN_ERR_TO_VALUE((ln_uint_t)(-4)))
+#define LN_OUT_OF_BOUNDS  (LN_ERR_TO_VALUE((ln_uint_t)(-5)))
 
 typedef LN_INT_TYPE  ln_int_t;
 typedef LN_UINT_TYPE ln_uint_t;
@@ -170,6 +171,9 @@ extern ln_uint_t ln_return;
 extern ln_uint_t ln_words_total, ln_words_saved;
 
 extern const int ln_type_match[];
+
+int ln_check_heap(ln_uint_t offset);
+int ln_check(ln_uint_t offset, ln_uint_t size);
 
 uint32_t  ln_hash(const char *text);
 ln_uint_t ln_fixed(const char *text);
