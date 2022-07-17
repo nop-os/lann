@@ -15,9 +15,6 @@
 #include <stdio.h>
 #include <lann.h>
 
-static uint32_t hash_table[14];
-static int hash_done = 0;
-
 static void print_fixed(ln_uint_t fixed, int first) {
   if (!first && !(fixed >> LN_FIXED_DOT)) return;
   
@@ -41,7 +38,7 @@ static void print_fixed(ln_uint_t fixed, int first) {
   }
 }
 
-void print_value(ln_uint_t value) {
+static void print_value(ln_uint_t value) {
   int type = LN_VALUE_TYPE(value);
   
   if (type == ln_type_number) {
@@ -219,7 +216,15 @@ static ln_uint_t get_term_lann(void) {
   return LN_INT_TO_VALUE(1);
 }
 
-static void stats_lann(void) {
+static ln_uint_t get_time_lann(void) {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  
+  ln_uint_t fixed_time = ((tv.tv_usec << LN_FIXED_DOT) / 1000000) + (tv.tv_sec << LN_FIXED_DOT);
+  return LN_FIXED_TO_VALUE(fixed_time);
+}
+
+static ln_uint_t stats_lann(void) {
   printf("bump: %u/%u bytes used (%d%%)\n",
     ln_bump_offset,
     ln_bump_size,
@@ -238,173 +243,130 @@ static void stats_lann(void) {
     (100 * ln_context_offset * sizeof(ln_entry_t) + ln_context_size / 2) / ln_context_size
   );
   
+  printf("func: %u/%u bytes used (%d%%)\n",
+    ln_func_offset * sizeof(ln_func_t),
+    ln_func_size,
+    (100 * ln_func_offset * sizeof(ln_func_t) + ln_func_size / 2) / ln_func_size
+  );
+  
   printf("word: %u/%u words skipped (%d%%)\n",
     ln_words_saved,
     ln_words_total,
     (100 * ln_words_saved + ln_words_total / 2) / ln_words_total
   );
+  
+  return LN_NULL;
 }
 
-static void do_hash(void) {
-  hash_table[0] = ln_hash("printf");
-  hash_table[1] = ln_hash("put_text");
-  hash_table[2] = ln_hash("put_char");
-  hash_table[3] = ln_hash("get_text");
-  hash_table[4] = ln_hash("get_char");
-  hash_table[5] = ln_hash("raw_mode");
-  hash_table[6] = ln_hash("get_term");
-  hash_table[7] = ln_hash("get_time");
-  hash_table[8] = ln_hash("stats");
-  hash_table[9] = ln_hash("exit");
-  hash_table[10] = ln_hash("file_size");
-  hash_table[11] = ln_hash("file_load");
-  hash_table[12] = ln_hash("file_save");
-  hash_table[13] = ln_hash("file_delete");
-  
-  hash_done = 1;
-}
-
-int func_handle(ln_uint_t *value, ln_uint_t hash) {
-  if (!hash_done) do_hash();
-  
-  if (hash == hash_table[0]) {
-    *value = printf_lann();
-    return 1;
-  } else if (hash == hash_table[1]) {
-    *value = put_text_lann();
-    return 1;
-  } else if (hash == hash_table[2]) {
-    *value = put_char_lann();
-    return 1;
-  } else if (hash == hash_table[3]) {
-    *value = get_text_lann();
-    return 1;
-  } else if (hash == hash_table[4]) {
-    *value = get_char_lann();
-    return 1;
-  } else if (hash == hash_table[5]) {
-    *value = raw_mode_lann();
-    return 1;
-  } else if (hash == hash_table[6]) {
-    *value = get_term_lann();
-    return 1;
-  } else if (hash == hash_table[7]) {
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    
-    ln_uint_t fixed_time = ((tv.tv_usec << LN_FIXED_DOT) / 1000000) + (tv.tv_sec << LN_FIXED_DOT);
-    
-    *value = LN_FIXED_TO_VALUE(fixed_time);
-    return 1;
-  } else if (hash == hash_table[8]) {
-    stats_lann();
-    
-    *value = LN_NULL;
-    return 1;
-  } else if (hash == hash_table[9]) {
-    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_number) {
-      *value = LN_INVALID_TYPE;
-      return 1;
-    }
-    
-    exit(LN_VALUE_TO_INT(ln_get_arg(0)));
-    return 1;
-  } else if (hash == hash_table[10]) {
-    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer) {
-      *value = LN_INVALID_TYPE;
-      return 1;
-    }
-    
-    const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
-    FILE *file = fopen(path, "r");
-    
-    if (!file) {
-      *value = LN_NULL;
-      return 1;
-    }
-    
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    
-    fclose(file);
-    
-    *value = LN_INT_TO_VALUE(size);
-    return 1;
-  } else if (hash == hash_table[11]) {
-    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(1)) != ln_type_pointer) {
-      *value = LN_INVALID_TYPE;
-      return 1;
-    }
-    
-    const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
-    FILE *file = fopen(path, "r");
-    
-    if (!file) {
-      *value = LN_NULL;
-      return 1;
-    }
-    
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    
-    rewind(file);
-    
-    if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(1)), size)) {
-      fclose(file);
-      
-      *value = LN_OUT_OF_BOUNDS;
-      return 1;
-    }
-    
-    size_t total = fread(ln_data + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
-    fclose(file);
-    
-    *value = LN_INT_TO_VALUE(total);
-    return 1;
-  } else if (hash == hash_table[12]) {
-    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(1)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(2)) != ln_type_number) {
-      *value = LN_INVALID_TYPE;
-      return 1;
-    }
-    
-    const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
-    FILE *file = fopen(path, "w");
-    
-    if (!file) {
-      *value = LN_NULL;
-      return 1;
-    }
-    
-    size_t size = (size_t)(LN_VALUE_TO_INT(ln_get_arg(2)));
-    
-    if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(1)), size)) {
-      fclose(file);
-      
-      *value = LN_OUT_OF_BOUNDS;
-      return 1;
-    }
-    
-    size_t total = fwrite(ln_data + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
-    fclose(file);
-    
-    *value = LN_INT_TO_VALUE(total);
-    return 1;
-  } else if (hash == hash_table[13]) {
-    if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer) {
-      *value = LN_INVALID_TYPE;
-      return 1;
-    }
-    
-    if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(0)), 1)) {
-      *value = LN_OUT_OF_BOUNDS;
-      return 1;
-    }
-    
-    remove(ln_data + LN_VALUE_TO_PTR(ln_get_arg(0)));
-    return 1;
+static ln_uint_t exit_lann(void) {
+  if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_number) {
+    return LN_INVALID_TYPE;
   }
   
-  return 0;
+  exit(LN_VALUE_TO_INT(ln_get_arg(0)));
+  return LN_NULL;
+}
+
+static ln_uint_t file_size_lann(void) {
+  if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer) {
+    return LN_INVALID_TYPE;
+  }
+  
+  const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
+  FILE *file = fopen(path, "r");
+  
+  if (!file) {
+    return LN_NULL;
+  }
+  
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  
+  fclose(file);
+  return LN_INT_TO_VALUE(size);
+}
+
+static ln_uint_t file_load_lann(void) {
+  if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(1)) != ln_type_pointer) {
+    return LN_INVALID_TYPE;
+  }
+  
+  const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
+  FILE *file = fopen(path, "r");
+  
+  if (!file) {
+    return LN_NULL;
+  }
+  
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  
+  rewind(file);
+  
+  if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(1)), size)) {
+    fclose(file);
+    return LN_OUT_OF_BOUNDS;
+  }
+  
+  size_t total = fread(ln_data + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
+  fclose(file);
+  
+  return LN_INT_TO_VALUE(total);
+}
+
+static ln_uint_t file_save_lann(void) {
+  if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(1)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(2)) != ln_type_number) {
+    return LN_INVALID_TYPE;
+  }
+  
+  const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
+  FILE *file = fopen(path, "w");
+  
+  if (!file) {
+    return LN_NULL;
+  }
+  
+  size_t size = (size_t)(LN_VALUE_TO_INT(ln_get_arg(2)));
+  
+  if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(1)), size)) {
+    fclose(file);
+    return LN_OUT_OF_BOUNDS;
+  }
+  
+  size_t total = fwrite(ln_data + LN_VALUE_TO_PTR(ln_get_arg(1)), 1, size, file);
+  fclose(file);
+  
+  return LN_INT_TO_VALUE(total);
+}
+
+static ln_uint_t file_delete_lann(void) {
+  if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer) {
+    return LN_INVALID_TYPE;
+  }
+  
+  if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(0)), 1)) {
+    return LN_OUT_OF_BOUNDS;
+  }
+  
+  remove(ln_data + LN_VALUE_TO_PTR(ln_get_arg(0)));
+  return LN_NULL;
+}
+
+void add_funcs(void) {
+  ln_func_add("printf", printf_lann);
+  ln_func_add("put_text", put_text_lann);
+  ln_func_add("put_char", put_char_lann);
+  ln_func_add("get_text", get_text_lann);
+  ln_func_add("get_char", get_char_lann);
+  ln_func_add("raw_mode", raw_mode_lann);
+  ln_func_add("get_term", get_term_lann);
+  ln_func_add("get_time", get_time_lann);
+  ln_func_add("stats", stats_lann);
+  ln_func_add("exit", exit_lann);
+  ln_func_add("file_size", file_size_lann);
+  ln_func_add("file_load", file_load_lann);
+  ln_func_add("file_save", file_save_lann);
+  ln_func_add("file_delete", file_delete_lann);
 }
 
 int import_handle(ln_uint_t *value, const char *path) {

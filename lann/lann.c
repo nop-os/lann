@@ -2,7 +2,6 @@
 #include <string.h>
 #include <lann.h>
 
-int (*ln_func_handle)(ln_uint_t *, ln_uint_t) = NULL;
 int (*ln_import_handle)(ln_uint_t *, const char *) = NULL;
 
 uint8_t *ln_data = NULL;
@@ -13,6 +12,9 @@ int ln_heap_inited = 0;
 
 ln_entry_t *ln_context = NULL;
 ln_uint_t ln_context_size = 0, ln_context_offset = 0;
+
+ln_func_t *ln_funcs = NULL;
+ln_uint_t ln_func_size = 0, ln_func_offset = 0;
 
 const char *ln_code = NULL;
 ln_uint_t ln_code_offset = 0;
@@ -103,15 +105,25 @@ ln_uint_t ln_fixed(const char *text) {
   return value;
 }
 
-void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t), int (*import_handle)(ln_uint_t *, const char *)) {
-  ln_bump_size =    (4  * size) / 16;
-  ln_context_size = (1  * size) / 16;
-  ln_heap_size =    (11 * size) / 16;
+void ln_init(void *buffer, ln_uint_t size, int (*import_handle)(ln_uint_t *, const char *)) {
+  ln_bump_size =    (6  * size) / 32;
+  ln_context_size = (2  * size) / 32;
+  ln_heap_size =    (23 * size) / 32;
+  ln_func_size =    (1  * size) / 32;
+  
+  if (ln_func_size < sizeof(ln_func_t) * 16) {
+    ln_func_size = sizeof(ln_func_t) * 16;
+    size -= ln_func_size;
+    
+    ln_bump_size =    (2 * size) / 8;
+    ln_context_size = (1 * size) / 8;
+    ln_heap_size =    (5 * size) / 8;
+  }
   
   ln_context = buffer;
-  ln_data = buffer + ln_context_size;
+  ln_funcs = buffer + ln_context_size;
+  ln_data = buffer + ln_context_size + ln_func_size;
   
-  ln_func_handle = func_handle;
   ln_import_handle = import_handle;
   
   ln_heap_t *block = (ln_heap_t *)(ln_data + ln_bump_size);
@@ -120,6 +132,26 @@ void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_ui
   block->free = 1;
   
   ln_heap_used = sizeof(ln_heap_t);
+}
+
+void ln_func_add(const char *name, ln_uint_t (*func)(void)) {
+  if ((ln_func_offset + 1) * sizeof(ln_func_t) > ln_func_size) return;
+  
+  ln_funcs[ln_func_offset++] = (ln_func_t){
+    .name = ln_hash(name),
+    .func = func
+  };
+}
+
+int ln_func_call(ln_uint_t *value, ln_uint_t hash) {
+  for (int i = 0; i < ln_func_offset; i++) {
+    if (ln_funcs[i].name == hash) {
+      *value = ln_funcs[i].func();
+      return 1;
+    }
+  }
+  
+  return 0;
 }
 
 void ln_heap_defrag(void) {
@@ -758,13 +790,7 @@ ln_uint_t ln_eval_0(int exec) {
       ln_bump_value(LN_NULL);
       ln_uint_t value = LN_UNDEFINED;
       
-      int handled = 0;
-      
-      if (ln_func_handle) {
-        handled = ln_func_handle(&value, word.hash);
-      }
-      
-      if (!handled) {
+      if (!ln_func_call(&value, word.hash)) {
         for (int i = ln_context_offset - 1; i >= 0; i--) {
           if (ln_context[i].name == word.hash) {
             ln_uint_t offset = LN_VALUE_TO_PTR(*((ln_uint_t *)(ln_data + ln_context[i].offset)));

@@ -61,6 +61,7 @@ enum {
 typedef struct ln_word_t ln_word_t;
 typedef struct ln_entry_t ln_entry_t;
 typedef struct ln_heap_t ln_heap_t;
+typedef struct ln_func_t ln_func_t;
 
 enum {
   ln_word_eof,
@@ -153,7 +154,11 @@ struct ln_heap_t {
   uint8_t data[];
 };
 
-extern int (*ln_func_handle)(ln_uint_t *, ln_uint_t);
+struct ln_func_t {
+  uint32_t name;
+  ln_uint_t (*func)(void);
+};
+
 extern int (*ln_import_handle)(ln_uint_t *, const char *);
 
 extern uint8_t *ln_data;
@@ -164,6 +169,9 @@ extern int ln_heap_inited;
 
 extern ln_entry_t *ln_context;
 extern ln_uint_t ln_context_size, ln_context_offset;
+
+extern ln_func_t *ln_funcs;
+extern ln_uint_t ln_func_size, ln_func_offset;
 
 extern const char *ln_code;
 extern ln_uint_t ln_code_offset;
@@ -184,7 +192,10 @@ int ln_check(ln_uint_t offset, ln_uint_t size);
 uint32_t  ln_hash(const char *text);
 ln_uint_t ln_fixed(const char *text);
 
-void ln_init(void *buffer, ln_uint_t size, int (*func_handle)(ln_uint_t *, ln_uint_t), int (*import_handle)(ln_uint_t *, const char *));
+void ln_init(void *buffer, ln_uint_t size, int (*import_handle)(ln_uint_t *, const char *));
+
+void ln_func_add(const char *name, ln_uint_t (*func)(void));
+int  ln_func_call(ln_uint_t *value, ln_uint_t hash);
 
 void      ln_heap_init(void);
 void      ln_heap_defrag(void);
