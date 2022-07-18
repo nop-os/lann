@@ -131,7 +131,7 @@ func draw_ui block begin
     if index >= 0 and index < line_count begin
       if index = min_y or index = max_y block begin
         let line get(lines, index)
-        let sub_index = 0
+        let sub_index 0
         
         if min_y != max_y and index = max_y put_text(ansi_invert)
         

@@ -48,6 +48,7 @@
 #define LN_DIVIDE_BY_ZERO (LN_ERR_TO_VALUE((ln_uint_t)(-3)))
 #define LN_INVALID_TYPE   (LN_ERR_TO_VALUE((ln_uint_t)(-4)))
 #define LN_OUT_OF_BOUNDS  (LN_ERR_TO_VALUE((ln_uint_t)(-5)))
+#define LN_SYNTAX_ERROR   (LN_ERR_TO_VALUE((ln_uint_t)(-6)))
 
 typedef LN_INT_TYPE  ln_int_t;
 typedef LN_UINT_TYPE ln_uint_t;
@@ -161,7 +162,8 @@ struct ln_func_t {
   ln_uint_t (*func)(void);
 };
 
-extern int (*ln_import_handle)(ln_uint_t *, const char *);
+extern int  (*ln_import_handle)(ln_uint_t *, const char *);
+extern void (*ln_syntax_handle)(void);
 
 extern uint8_t *ln_data;
 extern ln_uint_t ln_bump_size, ln_bump_offset, ln_bump_args;
@@ -195,7 +197,7 @@ int ln_check_string(ln_uint_t offset);
 uint32_t ln_hash(const char *text);
 ln_int_t ln_fixed(const char *text);
 
-void ln_init(void *buffer, ln_uint_t size, int (*import_handle)(ln_uint_t *, const char *));
+void ln_init(void *buffer, ln_uint_t size, int (*import_handle)(ln_uint_t *, const char *), void (*syntax_handle)(void));
 
 void ln_func_add(const char *name, ln_uint_t (*func)(void));
 int  ln_func_call(ln_uint_t *value, ln_uint_t hash);

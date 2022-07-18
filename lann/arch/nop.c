@@ -49,6 +49,8 @@ static void print_value(ln_uint_t value) {
     putstr("[invalid type]");
   } else if (value == LN_OUT_OF_BOUNDS) {
     putstr("[out of bounds]");
+  } else if (value == LN_SYNTAX_ERROR) {
+    putstr("[syntax error]");
   } else {
     printf("[error %u]", LN_VALUE_TO_ERR(value));
   }
@@ -314,32 +316,6 @@ void add_funcs(void) {
   ln_func_add("file_load", file_load_lann);
   ln_func_add("file_save", file_save_lann);
   ln_func_add("file_delete", file_delete_lann);
-}
-
-int import_handle(ln_uint_t *value, const char *path) {
-  FILE *file = fopen(path, "r");
-  if (!file) return 0;
-  
-  fseek(file, 0, SEEK_END);
-  size_t size = ftell(file);
-  
-  char *code = calloc(size + 1, 1);
-  
-  rewind(file);
-  fread(code, 1, size, file);
-  
-  fclose(file);
-  
-  ln_code = code;
-  ln_code_offset = 0;
-  
-  ln_last_curr = 0;
-  ln_last_next = 0;
-  
-  *value = ln_eval(1);
-  free(code);
-  
-  return 1;
 }
 
 #endif
