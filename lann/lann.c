@@ -1702,6 +1702,10 @@ ln_uint_t ln_eval_0(int exec) {
     ln_uint_t offset = ln_bump_offset;
     count = 0;
     
+    if (!ln_check_string(LN_VALUE_TO_PTR(args[count]))) {
+      return LN_OUT_OF_BOUNDS;
+    }
+    
     char *format = ln_data + LN_VALUE_TO_PTR(args[count]);
     count++;
     
@@ -1718,7 +1722,7 @@ ln_uint_t ln_eval_0(int exec) {
           if (type == ln_type_number) {
             ln_bump_text_fixed(LN_VALUE_TO_FIXED(value), 1);
           } else if (type == ln_type_pointer) {
-            if (!ln_check(LN_VALUE_TO_PTR(value), 1)) {
+            if (!ln_check_string(LN_VALUE_TO_PTR(value))) {
               ln_bump_text("[pointer ");
               ln_bump_offset--;
               

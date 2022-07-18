@@ -45,7 +45,7 @@ static void print_value(ln_uint_t value) {
     if (LN_VALUE_SIGN(value)) putchar('-');
     print_fixed(LN_FIXED_ABS(LN_VALUE_TO_FIXED(value)), 1);
   } else if (type == ln_type_pointer) {
-    if (ln_check(LN_VALUE_TO_PTR(value), 1)) putstr(ln_data + LN_VALUE_TO_PTR(value));
+    if (ln_check_string(LN_VALUE_TO_PTR(value))) putstr(ln_data + LN_VALUE_TO_PTR(value));
     else printf("[pointer %u]", LN_VALUE_TO_PTR(value));
   } else if (value == LN_NULL) {
     putstr("[null]");
@@ -68,15 +68,12 @@ static ln_uint_t printf_lann(void) {
   ln_uint_t value = ln_get_arg(index++);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
+  if (!ln_check_string(LN_VALUE_TO_PTR(value))) return LN_OUT_OF_BOUNDS;
   const char *format = ln_data + LN_VALUE_TO_PTR(value);
   
   while (*format) {
-    if (!ln_check((ln_uint_t)((void *)(format) - (void *)(ln_data)), 1)) return LN_OUT_OF_BOUNDS;
-    
     if (*format == '[') {
       format++;
-      
-      if (!ln_check((ln_uint_t)((void *)(format) - (void *)(ln_data)), 1)) return LN_OUT_OF_BOUNDS;
       
       if (*format == '[') putchar('[');
       else print_value(ln_get_arg(index++));
@@ -98,7 +95,7 @@ static ln_uint_t put_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
-  if (!ln_check(LN_VALUE_TO_PTR(value), 1)) return LN_OUT_OF_BOUNDS;
+  if (!ln_check_string(LN_VALUE_TO_PTR(value))) return LN_OUT_OF_BOUNDS;
   putstr(ln_data + LN_VALUE_TO_PTR(value));
   
   #ifndef __NOP__
@@ -123,14 +120,16 @@ static ln_uint_t put_char_lann(void) {
 
 static ln_uint_t get_text_lann(void) {
   ln_uint_t value = ln_get_arg(0);
-  if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
+  ln_uint_t max_length = ln_get_arg(1);
   
-  if (!ln_check(LN_VALUE_TO_PTR(value), 1)) return LN_OUT_OF_BOUNDS;
+  if (LN_VALUE_TYPE(value) != ln_type_pointer || LN_VALUE_TYPE(max_length) != ln_type_number) return LN_INVALID_TYPE;
+  
+  if (!ln_check(LN_VALUE_TO_PTR(value), LN_VALUE_TO_INT(max_length))) return LN_OUT_OF_BOUNDS;
   
   #ifdef __NOP__
-  gets_s(ln_data + LN_VALUE_TO_PTR(value), ln_bump_size);
+  gets_s(ln_data + LN_VALUE_TO_PTR(value), LN_VALUE_TO_INT(max_length));
   #else
-  fgets(ln_data + LN_VALUE_TO_PTR(value), ln_bump_size, stdin);
+  fgets(ln_data + LN_VALUE_TO_PTR(value), LN_VALUE_TO_INT(max_length), stdin);
   #endif
   
   size_t length = strlen(ln_data + LN_VALUE_TO_PTR(value));

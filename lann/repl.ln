@@ -4,7 +4,7 @@ array repl_text 80
 
 while true begin
   printf("> ")
-  get_text(repl_text)
+  get_text(repl_text, 80)
   
   let repl_value eval(repl_text)
   

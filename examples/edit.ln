@@ -261,7 +261,7 @@ func edit_close block begin
     mem_write(answer, 0)
     
     while mem_read(answer) != 'y' and mem_read(answer) != 'n' begin
-      edit_prompt(answer, "confirm", "save before exit? (y/n)")
+      edit_prompt(answer, 16, "confirm", "save before exit? (y/n)")
     end
     
     if mem_read(answer) = 'y' begin
@@ -457,15 +457,15 @@ func edit_prompt block begin
   goto_xy(0, term_height - 1)
   
   printf("[](empty)[] cancel ", ansi_invert, ansi_normal)
-  printf("[]enter[] [] ", ansi_invert, ansi_normal, get(args, 1))
+  printf("[]enter[] [] ", ansi_invert, ansi_normal, get(args, 2))
   
   put_text(ansi_fill)
   goto_xy(0, 0)
   
-  printf("[][]:[] ", ansi_invert, get(args, 2), ansi_normal)
+  printf("[][]:[] ", ansi_invert, get(args, 3), ansi_normal)
   put_text(ansi_fill)
   
-  get_text(get(args, 0))
+  get_text(get(args, 0), get(args, 1))
   raw_mode(true)
   
   let update_mode 3
@@ -473,7 +473,7 @@ end
 
 func ctrl_open block begin
   array new_path 256
-  edit_prompt(new_path, "open file", "path")
+  edit_prompt(new_path, 256, "open file", "path")
   
   array old_path 256
   str_copy(old_path, path)
@@ -500,7 +500,7 @@ func ctrl_save block begin
     str_copy(old_path, path)
     
     array new_path 256
-    edit_prompt(new_path, "save file", "path")
+    edit_prompt(new_path, 256, "save file", "path")
     
     if mem_read(new_path) begin
       str_copy(path, new_path)
