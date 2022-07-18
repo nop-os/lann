@@ -120,7 +120,7 @@ ln_int_t ln_fixed(const char *text) {
   const char *digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const char *ptr;
   
-  while (ptr = strchr(digits, ln_upper(*text))) {
+  while ((ptr = strchr(digits, ln_upper(*text)))) {
     if (!(*ptr)) break;
     
     value = (value * base) + (ptr - digits);
@@ -137,7 +137,7 @@ ln_int_t ln_fixed(const char *text) {
   text++;
   int factor = base;
   
-  while (ptr = strchr(digits, ln_upper(*text))) {
+  while ((ptr = strchr(digits, ln_upper(*text)))) {
     if (!(*ptr)) break;
     
     value += ((ln_int_t)((ln_uint_t)(1) << LN_FIXED_DOT) * (ptr - digits)) / factor;
@@ -189,7 +189,7 @@ void ln_func_add(const char *name, ln_uint_t (*func)(void)) {
 }
 
 int ln_func_call(ln_uint_t *value, ln_uint_t hash) {
-  for (int i = 0; i < ln_func_offset; i++) {
+  for (ln_uint_t i = 0; i < ln_func_offset; i++) {
     if (ln_funcs[i].name == hash) {
       *value = ln_funcs[i].func();
       return 1;
@@ -205,7 +205,7 @@ void ln_heap_defrag(void) {
   while ((uint8_t *)(block) < ln_data + ln_bump_size + ln_heap_size) {
     ln_heap_t *next_block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + block->size);
     
-    if (block->free) {
+    if (block->free && (uint8_t *)(next_block) < ln_data + ln_bump_size + ln_heap_size) {
       if (next_block->free) {
         block->size += next_block->size + sizeof(ln_heap_t);
         ln_heap_used -= sizeof(ln_heap_t);
@@ -376,7 +376,7 @@ ln_uint_t ln_cast(ln_uint_t value, int type) {
     else if (type == ln_type_error) return LN_ERR_TO_VALUE((ln_uint_t)(LN_VALUE_TO_INT(value)));
   } else if (old_type == ln_type_pointer) {
     if (type == ln_type_number) return LN_INT_TO_VALUE(LN_VALUE_TO_PTR(value));
-    else if (type == ln_type_error) LN_ERR_TO_VALUE(LN_VALUE_TO_PTR(value));
+    else if (type == ln_type_error) return LN_ERR_TO_VALUE(LN_VALUE_TO_PTR(value));
   } else if (old_type == ln_type_error) {
     if (type == ln_type_number) {
       ln_uint_t error = LN_VALUE_TO_ERR(value);
@@ -387,7 +387,7 @@ ln_uint_t ln_cast(ln_uint_t value, int type) {
       
       return LN_INT_TO_VALUE((ln_int_t)(error));
     } else if (type == ln_type_pointer) {
-      LN_PTR_TO_VALUE(LN_VALUE_TO_ERR(value));
+      return LN_PTR_TO_VALUE(LN_VALUE_TO_ERR(value));
     }
   }
   
@@ -450,7 +450,7 @@ ln_word_t ln_take(void) {
   }
   
   ln_uint_t offset = ln_bump_offset;
-  char *token = ln_data + offset;
+  const char *token = (const char *)(ln_data + offset);
   
   int in_string = 0;
   char string_chr = '\0';
@@ -856,7 +856,7 @@ ln_uint_t ln_eval_0(int exec) {
             ln_uint_t old_last_curr = ln_last_curr;
             ln_uint_t old_last_next = ln_last_next;
             
-            ln_code = ln_data + offset;
+            ln_code = (const char *)(ln_data + offset);
             ln_code_offset = 0;
             
             ln_last_curr = 0;
@@ -957,7 +957,7 @@ ln_uint_t ln_eval_0(int exec) {
     ln_uint_t offset = ln_bump_offset;
     
     if (exec) {
-      for (int i = code_start; i < code_end; i++) {
+      for (ln_uint_t i = code_start; i < code_end; i++) {
         ln_data[ln_bump_offset++] = ln_code[i];
       }
       
@@ -1480,7 +1480,7 @@ ln_uint_t ln_eval_0(int exec) {
         return LN_OUT_OF_BOUNDS;
       }
       
-      size_t length = strlen(ln_data + LN_VALUE_TO_PTR(ptr_2));
+      size_t length = strlen((const char *)(ln_data + LN_VALUE_TO_PTR(ptr_2)));
       
       if (!ln_check(LN_VALUE_TO_PTR(ptr_1), length + 1)) {
         ln_context_offset = context_offset;
@@ -1489,12 +1489,12 @@ ln_uint_t ln_eval_0(int exec) {
         return LN_OUT_OF_BOUNDS;
       }
       
-      strcpy(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2));
+      strcpy((char *)(ln_data + LN_VALUE_TO_PTR(ptr_1)), (const char *)(ln_data + LN_VALUE_TO_PTR(ptr_2)));
       
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
       
-      return strlen(ln_data + LN_VALUE_TO_PTR(ptr_1));
+      return strlen((const char *)(ln_data + LN_VALUE_TO_PTR(ptr_1)));
     }
     
     ln_context_offset = context_offset;
@@ -1530,7 +1530,7 @@ ln_uint_t ln_eval_0(int exec) {
         return LN_OUT_OF_BOUNDS;
       }
       
-      equal = !strcmp(ln_data + LN_VALUE_TO_PTR(ptr_1), ln_data + LN_VALUE_TO_PTR(ptr_2));
+      equal = !strcmp((const char *)(ln_data + LN_VALUE_TO_PTR(ptr_1)), (const char *)(ln_data + LN_VALUE_TO_PTR(ptr_2)));
     }
     
     ln_context_offset = context_offset;
@@ -1557,7 +1557,7 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     if (exec) {
-      int length = strlen(ln_data + LN_VALUE_TO_PTR(ptr));
+      int length = strlen((const char *)(ln_data + LN_VALUE_TO_PTR(ptr)));
       
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
@@ -1589,7 +1589,7 @@ ln_uint_t ln_eval_0(int exec) {
         return LN_OUT_OF_BOUNDS;
       }
       
-      ln_code = ln_data + LN_VALUE_TO_PTR(ptr);
+      ln_code = (const char *)(ln_data + LN_VALUE_TO_PTR(ptr));
       ln_code_offset = 0;
       
       ln_last_curr = 0;
@@ -1629,17 +1629,17 @@ ln_uint_t ln_eval_0(int exec) {
         return LN_OUT_OF_BOUNDS;
       }
       
-      size_t length = strlen(ln_data + LN_VALUE_TO_PTR(ptr));
+      size_t length = strlen((const char *)(ln_data + LN_VALUE_TO_PTR(ptr)));
       ln_uint_t value = LN_NULL;
       
       char path[length + strlen(LN_PATH) + 4];
       
       strcpy(path, LN_PATH);
-      strcat(path, ln_data + LN_VALUE_TO_PTR(ptr));
+      strcat(path, (const char *)(ln_data + LN_VALUE_TO_PTR(ptr)));
       strcat(path, ".ln");
       
       if (!ln_import_handle(&value, path)) {
-        strcpy(path, ln_data + LN_VALUE_TO_PTR(ptr));
+        strcpy(path, (const char *)(ln_data + LN_VALUE_TO_PTR(ptr)));
         ln_import_handle(&value, path);
       }
       
@@ -1694,7 +1694,7 @@ ln_uint_t ln_eval_0(int exec) {
     int count = 0;
     
     while (!ln_expect(NULL, ln_word_paren_right)) {
-      ln_uint_t value = ln_eval_expr(0);
+      ln_eval_expr(0);
       ln_expect(NULL, ln_word_comma);
       
       count++;
@@ -1723,7 +1723,7 @@ ln_uint_t ln_eval_0(int exec) {
       return LN_OUT_OF_BOUNDS;
     }
     
-    char *format = ln_data + LN_VALUE_TO_PTR(args[count]);
+    const char *format = (const char *)(ln_data + LN_VALUE_TO_PTR(args[count]));
     count++;
     
     while (*format) {
@@ -1746,7 +1746,7 @@ ln_uint_t ln_eval_0(int exec) {
               ln_bump_text_int(LN_VALUE_TO_PTR(value), 1);
               ln_data[ln_bump_offset++] = ']';
             } else {
-              ln_bump_text(ln_data + LN_VALUE_TO_PTR(value));
+              ln_bump_text((const char *)(ln_data + LN_VALUE_TO_PTR(value)));
               ln_bump_offset--;
             }
           } else if (value == LN_NULL) {
@@ -1804,7 +1804,7 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     if (exec) {
-      ln_int_t fixed = ln_fixed(ln_data + LN_VALUE_TO_PTR(ptr));
+      ln_int_t fixed = ln_fixed((const char *)(ln_data + LN_VALUE_TO_PTR(ptr)));
       
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
@@ -1835,7 +1835,7 @@ ln_uint_t ln_eval_0(int exec) {
     }
     
     if (exec) {
-      ln_int_t hash = (ln_int_t)(ln_hash(ln_data + LN_VALUE_TO_PTR(ptr)));
+      ln_int_t hash = (ln_int_t)(ln_hash((const char *)(ln_data + LN_VALUE_TO_PTR(ptr))));
       
       ln_context_offset = context_offset;
       ln_bump_offset = bump_offset;
@@ -1953,8 +1953,6 @@ ln_uint_t ln_eval_5(int exec) {
   if (ln_back || ln_break) exec = 0;
   ln_uint_t left = ln_eval_4(exec);
   
-  ln_word_t word;
-  
   for (;;) {
     if (ln_expect(NULL, ln_word_equal)) {
       ln_uint_t right = ln_eval_4(exec);
@@ -2026,7 +2024,7 @@ ln_uint_t ln_eval_stat(int exec) {
 
 ln_uint_t ln_eval(int exec) {
   if (ln_back || ln_break) exec = 0;
-  ln_uint_t value;
+  ln_uint_t value = LN_NULL;
   
   while (!ln_expect(NULL, ln_word_end) && !ln_expect(NULL, ln_word_eof)) {
     value = ln_eval_stat(exec);
