@@ -33,7 +33,7 @@
 #define LN_FIXED_ABS(x)      (LN_FIXED_SIGN((x)) ? -(x) : (x))
 #define LN_VALUE_NEGATE(x)   (LN_FIXED_TO_VALUE(-LN_VALUE_TO_FIXED((x))))
 #define LN_FIXED_TO_VALUE(x) (((ln_uint_t)((x)) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1)) | (LN_FIXED_SIGN((x)) << (8 * sizeof(x) - 2)))
-#define LN_INT_TO_VALUE(x)   (LN_FIXED_TO_VALUE((ln_int_t)((x)) << LN_FIXED_DOT))
+#define LN_INT_TO_VALUE(x)   (LN_FIXED_TO_VALUE((ln_int_t)((x)) * (ln_int_t)((ln_uint_t)(1) << LN_FIXED_DOT)))
 #define LN_VALUE_TO_PTR(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
 #define LN_PTR_TO_VALUE(x)   ((x) | ((ln_uint_t)(1) << (8 * sizeof(x) - 1)))
 #define LN_VALUE_TO_ERR(x)   ((x) & (((ln_uint_t)(1) << (8 * sizeof(x) - 2)) - 1))
