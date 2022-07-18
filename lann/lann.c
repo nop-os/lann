@@ -821,14 +821,13 @@ ln_uint_t ln_eval_0(int exec) {
       if (!ln_expect(NULL, ln_word_paren_right)) {
         for (;;) {
           ln_eval_expr(0);
+          count++;
           
           if (ln_expect(NULL, ln_word_paren_right)) {
             break;
           } else if (!ln_expect(NULL, ln_word_comma)) {
             return ln_syntax_error(exec);
           }
-          
-          count++;
         }
       }
       
@@ -837,10 +836,10 @@ ln_uint_t ln_eval_0(int exec) {
       
       if (!exec) return LN_NULL;
       
-      ln_code_offset = code_offset;
-      
       ln_uint_t args[count];
       count = 0;
+      
+      ln_code_offset = code_offset;
       
       if (!ln_expect(NULL, ln_word_paren_right)) {
         for (;;) {
@@ -1720,14 +1719,13 @@ ln_uint_t ln_eval_0(int exec) {
     
     for (;;) {
       ln_eval_expr(0);
+      count++;
       
       if (ln_expect(NULL, ln_word_paren_right)) {
         break;
       } else if (!ln_expect(NULL, ln_word_comma)) {
         return ln_syntax_error(exec);
       }
-      
-      count++;
     }
     
     ln_context_offset = context_offset;
