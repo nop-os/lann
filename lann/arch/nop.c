@@ -146,10 +146,13 @@ static ln_uint_t get_term_lann(void) {
   if (!ln_check(LN_VALUE_TO_PTR(ptr_1), sizeof(ln_uint_t))) return LN_OUT_OF_BOUNDS;
   if (!ln_check(LN_VALUE_TO_PTR(ptr_2), sizeof(ln_uint_t))) return LN_OUT_OF_BOUNDS;
   
-  // TODO
+  uint32_t size_raw = term_getsize();
   
-  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(80);
-  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(25);
+  uint16_t width =  (uint16_t)(size_raw >> 0 );
+  uint16_t height = (uint16_t)(size_raw >> 16);
+  
+  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(width);
+  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(height);
   
   return LN_INT_TO_VALUE(1);
 }
