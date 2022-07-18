@@ -67,7 +67,7 @@ You can check `main.c` inside the `lann` folder for reference.
 ## To-Do list
 
 - Implement a fixed-point division algorithm instead of approximating it.
-- Add support for Windows by creating `lann/arch/windows.c`.
+- Complete Windows port on `lann/arch/windows.c`.
 
 ## Licensing
 
