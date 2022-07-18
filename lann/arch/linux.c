@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #include <stdio.h>
 #include <lann.h>
 
@@ -233,6 +234,10 @@ static ln_uint_t file_size_lann(void) {
     return LN_INVALID_TYPE;
   }
   
+  if (!ln_check_string(LN_VALUE_TO_PTR(ln_get_arg(0)))) {
+    return LN_OUT_OF_BOUNDS;
+  }
+  
   const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
   FILE *file = fopen(path, "r");
   
@@ -250,6 +255,10 @@ static ln_uint_t file_size_lann(void) {
 static ln_uint_t file_load_lann(void) {
   if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer || LN_VALUE_TYPE(ln_get_arg(1)) != ln_type_pointer) {
     return LN_INVALID_TYPE;
+  }
+  
+  if (!ln_check_string(LN_VALUE_TO_PTR(ln_get_arg(0)))) {
+    return LN_OUT_OF_BOUNDS;
   }
   
   const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
@@ -280,6 +289,10 @@ static ln_uint_t file_save_lann(void) {
     return LN_INVALID_TYPE;
   }
   
+  if (!ln_check_string(LN_VALUE_TO_PTR(ln_get_arg(0)))) {
+    return LN_OUT_OF_BOUNDS;
+  }
+  
   const char *path = ln_data + LN_VALUE_TO_PTR(ln_get_arg(0));
   FILE *file = fopen(path, "w");
   
@@ -305,12 +318,49 @@ static ln_uint_t file_delete_lann(void) {
     return LN_INVALID_TYPE;
   }
   
-  if (!ln_check(LN_VALUE_TO_PTR(ln_get_arg(0)), 1)) {
+  if (!ln_check_string(LN_VALUE_TO_PTR(ln_get_arg(0)))) {
     return LN_OUT_OF_BOUNDS;
   }
   
   remove(ln_data + LN_VALUE_TO_PTR(ln_get_arg(0)));
   return LN_NULL;
+}
+
+static ln_uint_t lib_load_lann(void) {
+  if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_pointer) {
+    return LN_INVALID_TYPE;
+  }
+  
+  const char *name = (const char *)(ln_data + LN_VALUE_TO_PTR(ln_get_arg(0)));
+  
+  if (!ln_check_string(LN_VALUE_TO_PTR(ln_get_arg(0)))) {
+    return LN_OUT_OF_BOUNDS;
+  }
+  
+  char path[strlen(name) + strlen(LN_PATH) + 4];
+  
+  strcpy(path, LN_PATH);
+  strcat(path, name);
+  strcat(path, ".so");
+  
+  void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+  if (!handle) return LN_NULL;
+  
+  ln_func_t *funcs = dlsym(handle, "lann_handles");
+  
+  if (!funcs) {
+    dlclose(handle);
+    return LN_NULL;
+  }
+  
+  ln_uint_t count = 0;
+  
+  while (funcs->func) {
+    ln_funcs[ln_func_offset++] = *(funcs++);
+    count++;
+  }
+  
+  return LN_INT_TO_VALUE(count);
 }
 
 void add_funcs(void) {
@@ -328,6 +378,7 @@ void add_funcs(void) {
   ln_func_add("file_load", file_load_lann);
   ln_func_add("file_save", file_save_lann);
   ln_func_add("file_delete", file_delete_lann);
+  ln_func_add("lib_load", lib_load_lann);
 }
 
 #endif
