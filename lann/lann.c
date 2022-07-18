@@ -104,10 +104,13 @@ uint32_t ln_hash(const char *text) {
   return hash;
 }
 
-ln_uint_t ln_fixed(const char *text) {
-  ln_uint_t value = 0;
+ln_int_t ln_fixed(const char *text) {
+  ln_int_t value = 0;
+  
+  int negate = 0;
   int base = 10;
   
+  if (*text == '-') negate = 1, text++;
   if (*text == '0') text++;
   
   if (*text == 'b') base = 2, text++;
@@ -124,22 +127,26 @@ ln_uint_t ln_fixed(const char *text) {
     text++;
   }
   
-  value <<= LN_FIXED_DOT;
+  value *= (ln_int_t)((ln_uint_t)(1) << LN_FIXED_DOT);
   
-  if (*text != '.') return value;
+  if (*text != '.') {
+    if (negate) value = -value;
+    return value;
+  }
+  
   text++;
-  
   int factor = base;
   
   while (ptr = strchr(digits, ln_upper(*text))) {
     if (!(*ptr)) break;
     
-    value += (((ln_uint_t)(1) << LN_FIXED_DOT) * (ptr - digits)) / factor;
+    value += ((ln_int_t)((ln_uint_t)(1) << LN_FIXED_DOT) * (ptr - digits)) / factor;
     text++;
     
     factor *= base;
   }
   
+  if (negate) value = -value;
   return value;
 }
 
@@ -615,6 +622,10 @@ ln_word_t ln_take(void) {
     return (ln_word_t){.type = ln_word_func_str_size};
   } else if (hash == 0x974B66AA) {
     return (ln_word_t){.type = ln_word_func_str_format};
+  } else if (hash == 0xB7895734) {
+    return (ln_word_t){.type = ln_word_func_str_parse};
+  } else if (hash == 0x35B8DF69) {
+    return (ln_word_t){.type = ln_word_func_str_hash};
   } else if (hash == 0x08D22E0F) {
     return (ln_word_t){.type = ln_word_func_eval};
   } else if (hash == 0x112A90D4) {
@@ -1545,13 +1556,19 @@ ln_uint_t ln_eval_0(int exec) {
       return LN_OUT_OF_BOUNDS;
     }
     
-    int length = strlen(ln_data + LN_VALUE_TO_PTR(ptr));
+    if (exec) {
+      int length = strlen(ln_data + LN_VALUE_TO_PTR(ptr));
+      
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_INT_TO_VALUE(length);
+    }
     
     ln_context_offset = context_offset;
     ln_bump_offset = bump_offset;
     
-    if (exec) return LN_INT_TO_VALUE(length);
-    else return LN_NULL;
+    return LN_NULL;
   } else if (word.type == ln_word_func_eval) {
     ln_expect(NULL, ln_word_paren_left);
     
@@ -1768,6 +1785,68 @@ ln_uint_t ln_eval_0(int exec) {
     ln_bump_offset = bump_offset + (ln_bump_offset - offset);
     
     return LN_PTR_TO_VALUE(bump_offset);
+  } else if (word.type == ln_word_func_str_parse) {
+    ln_uint_t context_offset = ln_context_offset;
+    ln_uint_t bump_offset = ln_bump_offset;
+    
+    ln_expect(NULL, ln_word_paren_left);
+    
+    ln_uint_t ptr = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_paren_right);
+    
+    if (LN_VALUE_TYPE(ptr) != ln_type_pointer) return LN_INVALID_TYPE;
+    
+    if (!ln_check_string(LN_VALUE_TO_PTR(ptr))) {
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_OUT_OF_BOUNDS;
+    }
+    
+    if (exec) {
+      ln_int_t fixed = ln_fixed(ln_data + LN_VALUE_TO_PTR(ptr));
+      
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_FIXED_TO_VALUE(fixed);
+    }
+    
+    ln_context_offset = context_offset;
+    ln_bump_offset = bump_offset;
+    
+    return LN_NULL;
+  } else if (word.type == ln_word_func_str_hash) {
+    ln_uint_t context_offset = ln_context_offset;
+    ln_uint_t bump_offset = ln_bump_offset;
+    
+    ln_expect(NULL, ln_word_paren_left);
+    
+    ln_uint_t ptr = ln_eval_expr(exec);
+    ln_expect(NULL, ln_word_paren_right);
+    
+    if (LN_VALUE_TYPE(ptr) != ln_type_pointer) return LN_INVALID_TYPE;
+    
+    if (!ln_check_string(LN_VALUE_TO_PTR(ptr))) {
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_OUT_OF_BOUNDS;
+    }
+    
+    if (exec) {
+      ln_int_t hash = (ln_int_t)(ln_hash(ln_data + LN_VALUE_TO_PTR(ptr)));
+      
+      ln_context_offset = context_offset;
+      ln_bump_offset = bump_offset;
+      
+      return LN_INT_TO_VALUE(hash);
+    }
+    
+    ln_context_offset = context_offset;
+    ln_bump_offset = bump_offset;
+    
+    return LN_NULL;
   }
   
   return LN_NULL;

@@ -102,6 +102,8 @@ enum {
   ln_word_func_str_test,
   ln_word_func_str_size,
   ln_word_func_str_format,
+  ln_word_func_str_parse,
+  ln_word_func_str_hash,
   ln_word_func_eval,
   ln_word_func_import,
   
@@ -190,8 +192,8 @@ int ln_check_heap(ln_uint_t offset);
 int ln_check(ln_uint_t offset, ln_uint_t size);
 int ln_check_string(ln_uint_t offset);
 
-uint32_t  ln_hash(const char *text);
-ln_uint_t ln_fixed(const char *text);
+uint32_t ln_hash(const char *text);
+ln_int_t ln_fixed(const char *text);
 
 void ln_init(void *buffer, ln_uint_t size, int (*import_handle)(ln_uint_t *, const char *));
 
