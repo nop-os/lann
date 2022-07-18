@@ -1,17 +1,13 @@
-#ifdef __NOP__
-#include <nop/term.h>
-#else
+#if (__linux__ || __unix__)
+
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <termios.h>
-#include <unistd.h>
-#define putstr(str) printf("%s", str)
-#endif
-
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <lann.h>
 
@@ -45,18 +41,18 @@ static void print_value(ln_uint_t value) {
     if (LN_VALUE_SIGN(value)) putchar('-');
     print_fixed(LN_FIXED_ABS(LN_VALUE_TO_FIXED(value)), 1);
   } else if (type == ln_type_pointer) {
-    if (ln_check_string(LN_VALUE_TO_PTR(value))) putstr(ln_data + LN_VALUE_TO_PTR(value));
+    if (ln_check_string(LN_VALUE_TO_PTR(value))) printf("%s", ln_data + LN_VALUE_TO_PTR(value));
     else printf("[pointer %u]", LN_VALUE_TO_PTR(value));
   } else if (value == LN_NULL) {
-    putstr("[null]");
+    printf("[null]");
   } else if (value == LN_UNDEFINED) {
-    putstr("[undefined]");
+    printf("[undefined]");
   } else if (value == LN_DIVIDE_BY_ZERO) {
-    putstr("[divide by zero]");
+    printf("[divide by zero]");
   } else if (value == LN_INVALID_TYPE) {
-    putstr("[invalid type]");
+    printf("[invalid type]");
   } else if (value == LN_OUT_OF_BOUNDS) {
-    putstr("[out of bounds]");
+    printf("[out of bounds]");
   } else {
     printf("[error %u]", LN_VALUE_TO_ERR(value));
   }
@@ -84,10 +80,7 @@ static ln_uint_t printf_lann(void) {
     format++;
   }
   
-  #ifndef __NOP__
   fflush(stdout);
-  #endif
-  
   return LN_NULL;
 }
 
@@ -96,12 +89,9 @@ static ln_uint_t put_text_lann(void) {
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
   if (!ln_check_string(LN_VALUE_TO_PTR(value))) return LN_OUT_OF_BOUNDS;
-  putstr(ln_data + LN_VALUE_TO_PTR(value));
+  printf("%s", ln_data + LN_VALUE_TO_PTR(value));
   
-  #ifndef __NOP__
   fflush(stdout);
-  #endif
-  
   return LN_NULL;
 }
 
@@ -111,10 +101,7 @@ static ln_uint_t put_char_lann(void) {
   
   putchar(LN_VALUE_TO_INT(value));
   
-  #ifndef __NOP__
   fflush(stdout);
-  #endif
-  
   return LN_NULL;
 }
 
@@ -126,12 +113,7 @@ static ln_uint_t get_text_lann(void) {
   
   if (!ln_check(LN_VALUE_TO_PTR(value), LN_VALUE_TO_INT(max_length))) return LN_OUT_OF_BOUNDS;
   
-  #ifdef __NOP__
-  gets_s(ln_data + LN_VALUE_TO_PTR(value), LN_VALUE_TO_INT(max_length));
-  #else
   fgets(ln_data + LN_VALUE_TO_PTR(value), LN_VALUE_TO_INT(max_length), stdin);
-  #endif
-  
   size_t length = strlen(ln_data + LN_VALUE_TO_PTR(value));
   
   while (ln_data[LN_VALUE_TO_PTR(value) + (length - 1)] == '\n') {
@@ -144,12 +126,7 @@ static ln_uint_t get_text_lann(void) {
 
 static ln_uint_t get_char_lann(void) {
   char chr;
-  
-  #ifdef __NOP__
-  if (!term_read(&chr, 1)) chr = '\0';
-  #else
   if (read(STDIN_FILENO, &chr, 1) <= 0) chr = '\0';
-  #endif
   
   return LN_INT_TO_VALUE(chr);
 }
@@ -158,16 +135,6 @@ static ln_uint_t raw_mode_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_number) return LN_INVALID_TYPE;
   
-  #ifdef __NOP__
-  static int old_mode;
-  
-  if (LN_VALUE_TO_FIXED(value) != 0) {
-    old_mode = term_getmode();
-    term_setmode(0);
-  } else {
-    term_setmode(old_mode);
-  }
-  #else
   static struct termios old_termios;
   
   if (LN_VALUE_TO_FIXED(value) != 0) {
@@ -185,7 +152,6 @@ static ln_uint_t raw_mode_lann(void) {
   } else {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &old_termios);
   }
-  #endif
   
   return LN_NULL;
 }
@@ -197,11 +163,6 @@ static ln_uint_t get_term_lann(void) {
   if (!ln_check(LN_VALUE_TO_PTR(ptr_1), sizeof(ln_uint_t))) return LN_OUT_OF_BOUNDS;
   if (!ln_check(LN_VALUE_TO_PTR(ptr_2), sizeof(ln_uint_t))) return LN_OUT_OF_BOUNDS;
   
-  #ifdef __NOP__
-  // TODO
-  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(80);
-  *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(25);
-  #else
   struct winsize ws;
   
   if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
@@ -210,7 +171,6 @@ static ln_uint_t get_term_lann(void) {
   
   *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_1))) = LN_INT_TO_VALUE(ws.ws_col);
   *((ln_uint_t *)(ln_data + LN_VALUE_TO_PTR(ptr_2))) = LN_INT_TO_VALUE(ws.ws_row);
-  #endif
   
   return LN_INT_TO_VALUE(1);
 }
@@ -393,3 +353,5 @@ int import_handle(ln_uint_t *value, const char *path) {
   
   return 1;
 }
+
+#endif
