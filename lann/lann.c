@@ -39,15 +39,42 @@ int ln_check_heap(ln_uint_t offset) {
     return 0;
   }
   
-  // TODO: check if not right after a header
-  return 1;
+  ln_heap_t *block = (ln_heap_t *)(ln_data + ln_bump_size);
+  
+  while ((uint8_t *)(block) < ln_data + ln_bump_size + ln_heap_size) {
+    ln_heap_t *next_block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + block->size);
+    
+    if (block == (ln_heap_t *)((ln_data + offset) - sizeof(ln_heap_t))) {
+      if (block->free) return 0; // ohohoh, a use-after-free...
+      return 1;
+    }
+    
+    block = next_block;
+  }
+  
+  return 0; // probably not aligned to any block
 }
 
 int ln_check(ln_uint_t offset, ln_uint_t size) {
   if (offset + size <= ln_bump_size) {
     if (offset + size > ln_bump_offset) return 0; // don't access unused bump memory!
   } else if (offset + size <= ln_bump_size + ln_heap_size) {
-    // TODO: check if inside a used block AND not part of a header
+    ln_heap_t *block = (ln_heap_t *)(ln_data + ln_bump_size);
+    
+    while ((uint8_t *)(block) < ln_data + ln_bump_size + ln_heap_size) {
+      ln_heap_t *next_block = (ln_heap_t *)((uint8_t *)(block) + sizeof(ln_heap_t) + block->size);
+      
+      ln_uint_t start = ((uint8_t *)(block) - ln_data) + sizeof(ln_heap_t);
+      
+      if (offset >= start && offset + size <= start + block->size) {
+        if (block->free) return 0; // ohohoh, a use-after-free...
+        return 1;
+      }
+      
+      block = next_block;
+    }
+    
+    return 0; // this should only happen when accessing headers, a really bad idea indeed...
   } else {
     return 0; // always out of bounds
   }

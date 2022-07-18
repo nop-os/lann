@@ -67,7 +67,6 @@ You can check `main.c` inside the `lann` folder for reference.
 ## To-Do list
 
 - Implement a fixed-point division algorithm instead of approximating it.
-- Check OOBs properly in allocated memory regions.
 
 ## Licensing
 
