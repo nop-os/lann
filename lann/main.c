@@ -65,7 +65,7 @@ int main(int argc, const char **argv) {
   
   add_funcs();
   
-  const char *path = "/usr/share/lann/repl.ln";
+  const char *path = LN_PATH "/repl.ln";
   if (strcmp(argv[0], "lann")) path = "repl.ln";
   
   if (argc >= 2) path = argv[1];
