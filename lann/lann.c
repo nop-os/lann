@@ -538,7 +538,7 @@ ln_word_t ln_take(void) {
       }
     }
     
-    if (!in_string && (chr <= 45 || chr == '<' || chr == '=' || chr == '>' || chr == '^')) {
+    if (!in_string && (chr <= 45 || chr == '/' || chr == '<' || chr == '=' || chr == '>' || chr == '^')) {
       if (ln_bump_offset - offset) {
         ln_code_offset--;
       } else {
