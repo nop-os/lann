@@ -17,6 +17,7 @@ to modern Linux computers.
 - Error handling with custom error types and built-in checks for OOB, etc.
 - Function built-ins kept to a minimum and selectable, even printf is optional.
 - Support for package installation to `/usr/share/lann` or equivalent.
+- Bindings for existing C libraries.
 
 ## Example
 
@@ -54,6 +55,10 @@ binary with no arguments.
 Note that running it with no arguments will actually load the script at the path
 `/usr/share/lann/repl.ln`, so this could be replaced with a customized version
 if desired.
+
+## Bindings
+
+- [raylib](https://github.com/nop-os/lann_raylib)
 
 ## Embedding
 
