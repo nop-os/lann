@@ -196,14 +196,15 @@ void ln_func_add(const char *name, ln_uint_t (*func)(void)) {
   if ((ln_func_offset + 1) * sizeof(ln_func_t) > ln_func_size) return;
   
   ln_funcs[ln_func_offset++] = (ln_func_t){
-    .name = ln_hash(name),
+    .hash = ln_hash(name),
+    .name = name,
     .func = func
   };
 }
 
 int ln_func_call(ln_uint_t *value, ln_uint_t hash) {
   for (ln_uint_t i = 0; i < ln_func_offset; i++) {
-    if (ln_funcs[i].name == hash) {
+    if (ln_funcs[i].hash == hash) {
       *value = ln_funcs[i].func();
       return 1;
     }

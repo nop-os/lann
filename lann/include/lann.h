@@ -158,7 +158,9 @@ struct ln_heap_t {
 };
 
 struct ln_func_t {
-  uint32_t name;
+  uint32_t hash;
+  
+  const char *name;
   ln_uint_t (*func)(void);
 };
 

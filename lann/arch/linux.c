@@ -343,7 +343,7 @@ static ln_uint_t lib_load_lann(void) {
   strcat(path, name);
   strcat(path, ".so");
   
-  void *handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+  void *handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
   if (!handle) return LN_NULL;
   
   ln_func_t *funcs = dlsym(handle, "lann_handles");
@@ -355,8 +355,11 @@ static ln_uint_t lib_load_lann(void) {
   
   ln_uint_t count = 0;
   
-  while (funcs->func) {
-    ln_funcs[ln_func_offset++] = *(funcs++);
+  while (funcs->name && funcs->func) {
+    ln_funcs[ln_func_offset] = *(funcs++);
+    ln_funcs[ln_func_offset].hash = ln_hash(ln_funcs[ln_func_offset].name);
+    
+    ln_func_offset++;
     count++;
   }
   
