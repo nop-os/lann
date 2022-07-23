@@ -46,6 +46,7 @@ func draw_cursor block begin
   end
   
   goto_xy(temp_x, (cursor_y - scroll_y) + 1)
+  flush()
 end
 
 func draw_line block begin
@@ -55,7 +56,7 @@ func draw_line block begin
   put_text(get(lines, cursor_y))
   put_text(ansi_fill)
   
-  goto_xy(cursor_x, (cursor_y - scroll_y) + 1)
+  draw_cursor()
 end
 
 func draw_ui block begin
@@ -528,6 +529,7 @@ end else begin
 end
 
 raw_mode(true)
+set_flush(false)
 
 get_term(ref term_width, ref term_height)
 put_text(ansi_clear)
@@ -749,7 +751,9 @@ while true block begin
 end
 
 edit_close()
+
 raw_mode(false)
+set_flush(true)
 
 put_text(ansi_clear)
 goto_xy(0, 0)

@@ -12,52 +12,104 @@
 #include <stdio.h>
 #include <lann.h>
 
+static uint8_t flush_buffer[256];
+static int flush_offset = 0;
+
+static int do_flush = 1;
+
+static ln_uint_t set_flush_lann(void) {
+  if (LN_VALUE_TYPE(ln_get_arg(0)) != ln_type_number) {
+    return LN_INVALID_TYPE;
+  }
+  
+  do_flush = LN_VALUE_TO_INT(ln_get_arg(0));
+  return LN_NULL;
+}
+
+static ln_uint_t flush_lann(void) {
+  fwrite(flush_buffer, 1, flush_offset, stdout);
+  fflush(stdout);
+  
+  flush_offset = 0;
+  return LN_NULL;
+}
+
+static void put_char(int chr) {
+  flush_buffer[flush_offset++] = (uint8_t)(chr);
+  if (flush_offset >= 256 || (do_flush && chr == '\n')) flush_lann();
+}
+
+static void put_text(const char *str) {
+  while (*str) put_char(*(str++));
+}
+
 static void print_fixed(ln_uint_t fixed, int first) {
   if (!first && !(fixed >> LN_FIXED_DOT)) return;
   
   int digit = (fixed >> LN_FIXED_DOT) % 10;
   if (fixed >> LN_FIXED_DOT) print_fixed(fixed / 10, 0);
   
-  putchar('0' + digit);
+  put_char('0' + digit);
   if (!first) return;
   
   fixed = (fixed % ((ln_uint_t)(1) << LN_FIXED_DOT)) * 10;
   
   if (!fixed) return;
-  putchar('.');
+  put_char('.');
   
   for (int i = 0; i < 7; i++) {
     digit = (fixed >> LN_FIXED_DOT) % 10;
-    putchar('0' + digit);
+    put_char('0' + digit);
     
     if (!(fixed % ((ln_uint_t)(1) << LN_FIXED_DOT))) break;
     fixed *= 10;
   }
 }
 
+static void print_int(ln_int_t value, int first) {
+  if (value < 0) {
+    put_char('-');
+    value = -value;
+  }
+  
+  if (!first && !value) return;
+  
+  int digit = value % 10;
+  if (value) print_int(value / 10, 0);
+  
+  put_char('0' + digit);
+}
+
 static void print_value(ln_uint_t value) {
   int type = LN_VALUE_TYPE(value);
   
   if (type == ln_type_number) {
-    if (LN_VALUE_SIGN(value)) putchar('-');
+    if (LN_VALUE_SIGN(value)) put_char('-');
     print_fixed(LN_FIXED_ABS(LN_VALUE_TO_FIXED(value)), 1);
   } else if (type == ln_type_pointer) {
-    if (ln_check_string(LN_VALUE_TO_PTR(value))) printf("%s", ln_data + LN_VALUE_TO_PTR(value));
-    else printf("[pointer %u]", LN_VALUE_TO_PTR(value));
+    if (ln_check_string(LN_VALUE_TO_PTR(value))) {
+      put_text(ln_data + LN_VALUE_TO_PTR(value));
+    } else {
+      put_text("[pointer ");
+      print_int(LN_VALUE_TO_PTR(value), 1);
+      put_char(']');
+    }
   } else if (value == LN_NULL) {
-    printf("[null]");
+    put_text("[null]");
   } else if (value == LN_UNDEFINED) {
-    printf("[undefined]");
+    put_text("[undefined]");
   } else if (value == LN_DIVIDE_BY_ZERO) {
-    printf("[divide by zero]");
+    put_text("[divide by zero]");
   } else if (value == LN_INVALID_TYPE) {
-    printf("[invalid type]");
+    put_text("[invalid type]");
   } else if (value == LN_OUT_OF_BOUNDS) {
-    printf("[out of bounds]");
+    put_text("[out of bounds]");
   } else if (value == LN_SYNTAX_ERROR) {
-    printf("[syntax error]");
+    put_text("[syntax error]");
   } else {
-    printf("[error %u]", LN_VALUE_TO_ERR(value));
+    put_text("[error ");
+    print_int(LN_VALUE_TO_ERR(value), 1);
+    put_char(']');
   }
 }
 
@@ -74,16 +126,15 @@ static ln_uint_t printf_lann(void) {
     if (*format == '[') {
       format++;
       
-      if (*format == '[') putchar('[');
+      if (*format == '[') put_char('[');
       else print_value(ln_get_arg(index++));
     } else {
-      putchar(*format);
+      put_char(*format);
     }
 
     format++;
   }
   
-  fflush(stdout);
   return LN_NULL;
 }
 
@@ -92,9 +143,8 @@ static ln_uint_t put_text_lann(void) {
   if (LN_VALUE_TYPE(value) != ln_type_pointer) return LN_INVALID_TYPE;
   
   if (!ln_check_string(LN_VALUE_TO_PTR(value))) return LN_OUT_OF_BOUNDS;
-  printf("%s", ln_data + LN_VALUE_TO_PTR(value));
+  put_text(ln_data + LN_VALUE_TO_PTR(value));
   
-  fflush(stdout);
   return LN_NULL;
 }
 
@@ -102,9 +152,7 @@ static ln_uint_t put_char_lann(void) {
   ln_uint_t value = ln_get_arg(0);
   if (LN_VALUE_TYPE(value) != ln_type_number) return LN_INVALID_TYPE;
   
-  putchar(LN_VALUE_TO_INT(value));
-  
-  fflush(stdout);
+  put_char(LN_VALUE_TO_INT(value));
   return LN_NULL;
 }
 
@@ -113,10 +161,11 @@ static ln_uint_t get_text_lann(void) {
   ln_uint_t max_length = ln_get_arg(1);
   
   if (LN_VALUE_TYPE(value) != ln_type_pointer || LN_VALUE_TYPE(max_length) != ln_type_number) return LN_INVALID_TYPE;
-  
   if (!ln_check(LN_VALUE_TO_PTR(value), LN_VALUE_TO_INT(max_length))) return LN_OUT_OF_BOUNDS;
   
+  if (do_flush) flush_lann();
   fgets(ln_data + LN_VALUE_TO_PTR(value), LN_VALUE_TO_INT(max_length), stdin);
+  
   size_t length = strlen(ln_data + LN_VALUE_TO_PTR(value));
   
   while (ln_data[LN_VALUE_TO_PTR(value) + (length - 1)] == '\n') {
@@ -129,6 +178,8 @@ static ln_uint_t get_text_lann(void) {
 
 static ln_uint_t get_char_lann(void) {
   char chr;
+  
+  if (do_flush) flush_lann();
   if (read(STDIN_FILENO, &chr, 1) <= 0) chr = '\0';
   
   return LN_INT_TO_VALUE(chr);
