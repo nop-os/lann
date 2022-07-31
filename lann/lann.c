@@ -196,6 +196,21 @@ void ln_init(void *buffer, ln_uint_t size, int (*import_handle)(ln_uint_t *, con
   block->free = 1;
   
   ln_heap_used = sizeof(ln_heap_t);
+  
+  ln_bump_offset = 0;
+  ln_bump_args = 0;
+  
+  ln_context_offset = 0;
+  ln_func_offset = 0;
+  
+  ln_last_curr = 0;
+  ln_last_next = 0;
+  
+  ln_back = 0;
+  ln_break = 0;
+  
+  ln_words_total = 0;
+  ln_words_saved = 0;
 }
 
 void ln_func_add(const char *name, ln_uint_t (*func)(void)) {
