@@ -1,7 +1,12 @@
 #ifndef __LANN_H__
 #define __LANN_H__
 
+#ifdef __USE_TYPE_H__
+#include <type.h>
+#else
+#include <stddef.h>
 #include <stdint.h>
+#endif
 
 #ifndef LN_UINT_TYPE
 #define LN_UINT_TYPE uint64_t

@@ -1,4 +1,10 @@
+#ifdef __USE_TYPE_H__
+#include <type.h>
+#else
+#include <stddef.h>
 #include <stdint.h>
+#endif
+
 #include <string.h>
 #include <lann.h>
 
